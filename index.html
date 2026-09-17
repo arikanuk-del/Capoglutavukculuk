@@ -19,6 +19,45 @@
   --amber:#C9871F; --amber-l:#F8EED5;
   --radius:14px; --shadow:0 1px 2px rgba(16,38,43,.04);
 }
+
+/* ---------- Gece modu (varsayılan: cihaz ayarı; düğme geçersiz kılar) ---------- */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ink:#E7EFEF; --ink-2:#B4C6C8;
+  --petrol:#0F818C; --petrol-d:#0C6A73; --petrol-l:#123A40;
+  --frost:#0C1A1E; --surface:#122A30; --line:#264449;
+  --muted:#8CA3A6;
+  --fresh:#37B884; --fresh-l:#123A30;
+  --alert:#E96A54; --alert-l:#3A211C;
+  --amber:#D8A24A; --amber-l:#33291A;
+}
+:root[data-theme="dark"] .nav-item.active,
+:root[data-theme="dark"] .seg button.on,
+:root[data-theme="dark"] .b-neu,
+:root[data-theme="dark"] .aic.buy{color:#6FD0D8}
+:root[data-theme="dark"] .b-ok,
+:root[data-theme="dark"] .aic.in,
+:root[data-theme="dark"] .intake-badge{background:rgba(55,184,132,.15);color:#5FCE9B}
+:root[data-theme="dark"] .b-warn{background:rgba(216,162,74,.16);color:#E4B45E}
+:root[data-theme="dark"] .b-bad,
+:root[data-theme="dark"] .aic.out,
+:root[data-theme="dark"] .item-row .rm{background:rgba(233,106,84,.16);color:#F28E78}
+:root[data-theme="dark"] .b-mut,
+:root[data-theme="dark"] kbd{background:#20383E;color:var(--muted)}
+:root[data-theme="dark"] th,
+:root[data-theme="dark"] .item-head,
+:root[data-theme="dark"] .item-add{background:#152C32}
+:root[data-theme="dark"] td,
+:root[data-theme="dark"] .arow,
+:root[data-theme="dark"] .crit,
+:root[data-theme="dark"] .item-row,
+:root[data-theme="dark"] .intake-item{border-bottom-color:#223A40}
+:root[data-theme="dark"] tbody tr:hover{background:#163036}
+:root[data-theme="dark"] .topbar{background:rgba(12,26,30,.86)}
+:root[data-theme="dark"] .btn-ghost:hover{background:#163036;border-color:#33585E}
+:root[data-theme="dark"] .icon-btn:hover{border-color:#33585E}
+:root[data-theme="dark"] .toast{background:#20383E}
+:root[data-theme="dark"] .login{background:radial-gradient(1100px 560px at 50% -10%,#123037,var(--frost))}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
@@ -288,6 +327,7 @@ kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-wei
 }
 @media(min-width:901px){.hamb{display:none}}
 </style>
+<script>(function(){try{var s=localStorage.getItem('panel_theme');var d=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
 </head>
 <body>
 <div id="bootScreen" class="boot"><div class="boot-mark">❄️</div><div class="spinner"></div><div>Yükleniyor…</div></div>
@@ -313,7 +353,7 @@ kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-wei
     </div>
     <nav id="nav"></nav>
     <div class="side-foot">
-      <div class="user-row"><div class="user-ic">👤</div><div class="user-meta"><b id="userEmail">—</b><span>Çapoğlu Tavukçuluk</span></div></div>
+      <div class="user-row"><div class="user-ic">👤</div><div class="user-meta"><b id="userEmail">—</b><span>Çapoğlu Tavukçuluk</span></div><button class="icon-btn" id="themeBtn" style="margin-left:auto" onclick="toggleTheme()" title="Gece / aydınlık"></button></div>
       <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="logout()">Çıkış yap</button>
     </div>
   </aside>
@@ -566,7 +606,9 @@ const I={
   down:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
   up:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',
   search:'<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/>',
-  barcode:'<path d="M3 5v14M6 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/>'
+  barcode:'<path d="M3 5v14M6 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/>',
+  sun:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/>',
+  moon:'<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.3a6.6 6.6 0 0 0 9.8 9.5z"/>'
 };
 const svg=(p,w=20)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px">${p}</svg>`;
 
@@ -1379,9 +1421,19 @@ function finishIntake(){
 }
 
 /* ============================================================
+   TEMA (gece / aydınlık — varsayılan: cihaz ayarı)
+============================================================ */
+function currentTheme(){ return document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; }
+function updateThemeBtn(t){ const b=document.getElementById('themeBtn'); if(b)b.innerHTML=svg(t==='dark'?I.sun:I.moon,16); }
+function applyTheme(t){ document.documentElement.setAttribute('data-theme',t); updateThemeBtn(t); }
+function toggleTheme(){ const t=currentTheme()==='dark'?'light':'dark'; try{localStorage.setItem('panel_theme',t);}catch(e){} applyTheme(t); }
+try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',e=>{ try{if(localStorage.getItem('panel_theme'))return;}catch(_){ } applyTheme(e.matches?'dark':'light'); }); }catch(e){}
+
+/* ============================================================
    INIT
 ============================================================ */
 $('#today').textContent=new Date().toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long'});
+updateThemeBtn(currentTheme());
 initAuth();
 </script>
 </body>
