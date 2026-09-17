@@ -221,6 +221,30 @@ th.r,td.r{text-align:right}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .toast svg{width:17px;height:17px;color:var(--fresh)}
 
+/* ---------- Barcode scanner ---------- */
+.scan-ov{position:fixed;inset:0;background:#000;z-index:300;display:none;flex-direction:column}
+.scan-ov.show{display:flex}
+.scan-video{flex:1;width:100%;height:100%;object-fit:cover;background:#000}
+.scan-frame{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);width:76%;max-width:340px;aspect-ratio:1.55;border:2px solid rgba(255,255,255,.92);border-radius:16px;box-shadow:0 0 0 100vmax rgba(0,0,0,.5);pointer-events:none}
+.scan-line{position:absolute;left:8px;right:8px;height:2px;background:var(--fresh);box-shadow:0 0 8px var(--fresh);animation:scanmove 1.7s ease-in-out infinite}
+@keyframes scanmove{0%,100%{top:14%}50%{top:86%}}
+.scan-top{position:absolute;top:0;left:0;right:0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;color:#fff;z-index:4}
+.scan-top b{font-weight:800;font-size:16px}
+.scan-hint{position:absolute;top:calc(44% + 130px);left:0;right:0;text-align:center;color:#fff;font-size:13.5px;font-weight:600;opacity:.92;z-index:4;padding:0 20px}
+.scan-bot{position:absolute;bottom:26px;left:0;right:0;display:flex;justify-content:center;z-index:4}
+.scan-btn{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.45);color:#fff;padding:11px 20px;border-radius:12px;font-weight:700;font-size:14px;font-family:inherit}
+.scan-sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:20px 20px 0 0;padding:18px 18px 26px;z-index:6;transform:translateY(115%);transition:transform .22s;box-shadow:0 -8px 30px rgba(0,0,0,.35)}
+.scan-sheet.show{transform:none}
+.sheet-name{font-size:16px;font-weight:800;letter-spacing:-.2px}
+.sheet-select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:var(--surface);color:var(--ink)}
+.sheet-btns{display:flex;gap:10px;margin-top:12px}
+.big-qty{display:flex;align-items:center;gap:12px;justify-content:center;margin:14px 0 4px}
+.big-qty button{width:48px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:24px;font-weight:700;color:var(--petrol);line-height:1}
+.big-qty input{width:96px;text-align:center;font-size:26px;font-weight:800;border:1px solid var(--line);border-radius:12px;padding:9px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.intake-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #eef4f4;font-size:13.5px}
+.intake-item:last-child{border-bottom:0}
+.intake-badge{background:var(--fresh-l);color:#157A50;font-weight:800;border-radius:8px;padding:2px 10px;font-size:12.5px}
+
 .backdrop{display:none}
 kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;font-family:inherit;color:var(--ink-2)}
 
@@ -273,6 +297,15 @@ kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-wei
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"></div>
 
+<div class="scan-ov" id="scanOv">
+  <video class="scan-video" id="scanVideo" playsinline muted autoplay></video>
+  <div class="scan-frame"><div class="scan-line"></div></div>
+  <div class="scan-top"><b id="scanTitle">Barkod tara</b><button class="scan-btn" onclick="closeScanner()">Kapat</button></div>
+  <div class="scan-hint" id="scanHint">Barkodu çerçeveye getirin</div>
+  <div class="scan-bot"><button class="scan-btn" onclick="manualEntry()">Barkodu elle gir</button></div>
+  <div class="scan-sheet" id="scanSheet"></div>
+</div>
+
 <script>
 /* ============================================================
    DATA LAYER  — localStorage now; structured so a Supabase
@@ -306,7 +339,7 @@ function seed(){
   ];
   const urunler=[];
   const push=(arr,kat,birim)=>arr.forEach(r=>urunler.push({
-    id:uid('p'),ad:r[0],kategori:kat,birim:birim,alis:r[1],satis:r[2],stok:r[3],kritik:r[4],kdv:1
+    id:uid('p'),ad:r[0],kategori:kat,birim:birim,alis:r[1],satis:r[2],stok:r[3],kritik:r[4],kdv:1,barkod:''
   }));
   push(raw,'Çiğ Tavuk','kg'); push(hazir,'Hazır Ürün','adet'); push(deli,'Şarküteri & Diğer','adet');
 
@@ -433,7 +466,8 @@ const I={
   cash:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
   down:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
   up:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',
-  search:'<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/>'
+  search:'<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/>',
+  barcode:'<path d="M3 5v14M6 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/>'
 };
 const svg=(p,w=20)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px">${p}</svg>`;
 
@@ -612,6 +646,12 @@ function viewStok(){
   const list=[...DB.urunler].sort((a,b)=>(a.stok<=a.kritik?-1:1)-(b.stok<=b.kritik?-1:1));
   const har=[...DB.stokHar].sort((a,b)=>new Date(b.tarih)-new Date(a.tarih)).slice(0,12);
   $('#view').innerHTML=`
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="startIntake()">${svg(I.down,16)}Hızlı mal kabul</button>
+    <button class="btn btn-ghost" onclick="scanForStock()">${svg(I.barcode,16)}Barkod tara</button>
+    <div class="spacer" style="flex:1"></div>
+    <div style="font-size:12.5px;color:var(--muted);font-weight:600">${kritikler().length} kritik ürün</div>
+  </div>
   <div class="grid-3">
     <div class="panel" style="padding:0;overflow:hidden">
       <div class="panel-h" style="padding:16px 18px 0"><h3>Stok durumu</h3><span class="sub">${kritikler().length} kritik</span></div>
@@ -893,9 +933,10 @@ function formUrun(id){
     ${field('u_stok','Stok','number',u.stok??'')}
     ${field('u_kritik','Kritik stok eşiği','number',u.kritik??'')}
     ${field('u_kdv','KDV %','number',u.kdv??1)}
+    <div class="field full"><label>Barkod</label><div style="display:flex;gap:8px"><input id="u_barkod" type="text" value="${esc(u.barkod||'')}" placeholder="Kutu barkodu (opsiyonel)" style="flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink)"><button type="button" class="btn btn-ghost btn-sm" onclick="scanIntoField('u_barkod')">${svg(I.barcode,15)}Tara</button></div><span class="hint">Paketli ürünlerde barkod okutup stok girişini hızlandırır.</span></div>
   </div>`,()=>{
     if(!val('u_ad'))return toast('Ürün adı gerekli');
-    const o={ad:val('u_ad'),kategori:val('u_kat'),birim:val('u_birim'),alis:numv('u_alis'),satis:numv('u_satis'),stok:numv('u_stok'),kritik:numv('u_kritik'),kdv:numv('u_kdv')};
+    const o={ad:val('u_ad'),kategori:val('u_kat'),birim:val('u_birim'),alis:numv('u_alis'),satis:numv('u_satis'),stok:numv('u_stok'),kritik:numv('u_kritik'),kdv:numv('u_kdv'),barkod:val('u_barkod')};
     if(id)Object.assign(urun(id),o); else DB.urunler.push({id:uid('p'),...o});
     Store.save();closeModal();toast(id?'Ürün güncellendi':'Ürün eklendi');viewUrunler();
   });
@@ -1103,6 +1144,129 @@ function delItem(tbl,id,ad){
   if(!confirm(`"${ad}" silinsin mi?`))return;
   DB[tbl]=DB[tbl].filter(x=>x.id!==id);
   Store.save();toast('Silindi');render();
+}
+
+/* ============================================================
+   BARKOD TARAMA & HIZLI MAL KABUL
+============================================================ */
+let scanStream=null,scanActive=false,scanContinuous=false,scanReader=null,scanDetector=null,scanRAF=null,scanOnCode=null;
+let intakeMode=false,intakeLog=[],pendingCode=null,pendingProduct=null;
+
+function ensureZXing(){return new Promise((res,rej)=>{if(window.ZXing)return res();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';s.onload=()=>res();s.onerror=()=>rej();document.head.appendChild(s);});}
+
+async function openScanner(title,onCode,continuous){
+  scanOnCode=onCode; scanContinuous=!!continuous; scanActive=true;
+  document.getElementById('scanTitle').textContent=title||'Barkod tara';
+  document.getElementById('scanHint').textContent='Barkodu çerçeveye getirin';
+  document.getElementById('scanSheet').classList.remove('show');
+  document.getElementById('scanOv').classList.add('show');
+  const video=document.getElementById('scanVideo');
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    video.srcObject=scanStream; await video.play();
+  }catch(e){ closeScanner(); manualEntryPrompt(onCode,continuous); return; }
+  if('BarcodeDetector' in window){
+    try{scanDetector=new window.BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar']});}
+    catch(_){try{scanDetector=new window.BarcodeDetector();}catch(__){scanDetector=null;}}
+    if(scanDetector){startDetectLoop();return;}
+  }
+  try{await ensureZXing();}catch(_){}
+  if(window.ZXing){
+    scanReader=new ZXing.BrowserMultiFormatReader();
+    try{scanReader.decodeFromStream(scanStream,video,(result)=>{if(result&&scanActive)onDetected(result.getText());});}
+    catch(_){document.getElementById('scanHint').textContent='Tarama başlatılamadı — barkodu elle girin';}
+  }else{
+    document.getElementById('scanHint').textContent='Bu cihazda otomatik tarama yok — barkodu elle girin';
+  }
+}
+function startDetectLoop(){
+  const video=document.getElementById('scanVideo');
+  const loop=async()=>{
+    if(!scanActive||!scanDetector)return;
+    try{const codes=await scanDetector.detect(video);if(codes&&codes.length){onDetected(codes[0].rawValue);return;}}catch(_){}
+    scanRAF=requestAnimationFrame(loop);
+  };
+  scanRAF=requestAnimationFrame(loop);
+}
+function onDetected(code){
+  if(!scanActive)return; scanActive=false;
+  if(navigator.vibrate){try{navigator.vibrate(55);}catch(_){}}
+  code=String(code).trim();
+  if(scanContinuous){ showIntakeSheet(code); }
+  else{
+    stopCamera(); document.getElementById('scanOv').classList.remove('show');
+    const cb=scanOnCode; scanOnCode=null; if(cb)cb(code);
+  }
+}
+function stopCamera(){
+  if(scanRAF){cancelAnimationFrame(scanRAF);scanRAF=null;}
+  if(scanReader){try{scanReader.reset();}catch(_){}scanReader=null;}
+  scanDetector=null;
+  if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
+}
+function closeScanner(){scanActive=false;stopCamera();document.getElementById('scanOv').classList.remove('show');document.getElementById('scanSheet').classList.remove('show');scanOnCode=null;}
+function manualEntry(){const cb=scanOnCode,cont=scanContinuous;closeScanner();manualEntryPrompt(cb,cont);}
+function manualEntryPrompt(onCode,continuous){
+  openModal('Barkodu elle gir',`<div class="form-grid"><div class="field full"><label>Barkod numarası</label><input id="mb_code" type="text" inputmode="numeric" placeholder="Örn. 8690000000000"></div><div class="field full"><span class="hint">Kamerayla okutamıyorsanız numarayı yazın.</span></div></div>`,()=>{
+    const c=val('mb_code'); if(!c)return toast('Barkod girin'); closeModal();
+    if(continuous){ intakeMode=true; showIntakeSheetModal(c); } else if(onCode){ onCode(c); }
+  },'Devam');
+}
+
+/* --- tek tarama: stok hareketi --- */
+function scanForStock(){
+  openScanner('Barkod tara',code=>{
+    const u=DB.urunler.find(x=>(x.barkod||'')===code);
+    if(u)formStok(u.id); else assignBarcode(code,id=>formStok(id));
+  },false);
+}
+function assignBarcode(code,then){
+  openModal('Yeni barkod',`<div class="form-grid"><div class="field full"><span class="hint">Bu barkod (<b class="mono-n">${esc(code)}</b>) henüz tanımlı değil. Hangi ürüne ait?</span></div><div class="field full"><label>Ürün</label><select id="ab_sel"><option value="">Seç...</option>${DB.urunler.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select></div></div>`,()=>{
+    const id=val('ab_sel'); if(!id)return toast('Ürün seçin'); urun(id).barkod=code; Store.save(); closeModal(); toast('Barkod eşleştirildi'); if(then)then(id);
+  },'Eşleştir');
+}
+function scanIntoField(fieldId){
+  openScanner('Barkod tara',code=>{const el=document.getElementById(fieldId);if(el){el.value=code;toast('Barkod okundu');}},false);
+}
+
+/* --- hızlı mal kabul (sürekli) --- */
+function startIntake(){intakeMode=true;intakeLog=[];openScanner('Hızlı mal kabul',null,true);}
+function showIntakeSheet(code){const sheet=document.getElementById('scanSheet');sheet.innerHTML=intakeSheetHTML(code);sheet.classList.add('show');}
+function intakeSheetHTML(code){
+  const u=DB.urunler.find(x=>(x.barkod||'')===code); pendingCode=code; pendingProduct=u||null;
+  const qty=`<div class="big-qty"><button type="button" onclick="bump(-1)">−</button><input id="ikQty" type="number" value="1" inputmode="numeric"><button type="button" onclick="bump(1)">+</button></div>`;
+  if(u){
+    return `<div class="sheet-name">${esc(u.ad)} <span class="t-sub">· stok ${NUM(u.stok)} ${u.birim}</span></div>${qty}
+      <div class="sheet-btns"><button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="intakeSkip()">Farklı ürün</button><button class="btn btn-primary" style="flex:1;justify-content:center" onclick="intakeAdd()">Ekle & devam</button></div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:10px;justify-content:center" onclick="finishIntake()">Bitir (${intakeLog.length} kalem)</button>`;
+  }
+  return `<div class="sheet-name">Yeni barkod</div><div class="t-sub" style="margin:2px 0 6px"><span class="mono-n">${esc(code)}</span> — hangi ürün?</div>
+    <select class="sheet-select" id="ikSel"><option value="">Ürün seç...</option>${DB.urunler.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select>${qty}
+    <div class="sheet-btns"><button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="intakeSkip()">Atla</button><button class="btn btn-primary" style="flex:1;justify-content:center" onclick="intakeAddNew()">Eşleştir & devam</button></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:10px;justify-content:center" onclick="finishIntake()">Bitir (${intakeLog.length} kalem)</button>`;
+}
+function bump(d){const q=document.getElementById('ikQty');if(q)q.value=Math.max(1,(parseInt(q.value)||1)+d);}
+function intakeAdd(){const q=parseInt((document.getElementById('ikQty')||{}).value)||1;applyIntake(pendingProduct,q);sheetResume();}
+function intakeAddNew(){const id=(document.getElementById('ikSel')||{}).value;if(!id)return toast('Ürün seçin');const u=urun(id);u.barkod=pendingCode;const q=parseInt((document.getElementById('ikQty')||{}).value)||1;applyIntake(u,q);sheetResume();}
+function intakeSkip(){sheetResume();}
+function applyIntake(u,q){u.stok+=q;DB.stokHar.push({id:uid('h'),tarih:new Date().toISOString(),urunId:u.id,ad:u.ad,tip:'giris',miktar:q,aciklama:'Hızlı mal kabul'});intakeLog.push({ad:u.ad,q,birim:u.birim});Store.save();toast(u.ad+' +'+NUM(q));}
+function sheetResume(){document.getElementById('scanSheet').classList.remove('show');pendingProduct=null;pendingCode=null;scanActive=true;if(scanDetector)startDetectLoop();}
+function showIntakeSheetModal(code){
+  const u=DB.urunler.find(x=>(x.barkod||'')===code); pendingCode=code; pendingProduct=u||null;
+  const body=`<div class="form-grid">
+    ${u?`<div class="field full"><span class="hint"><b>${esc(u.ad)}</b> · stok ${NUM(u.stok)} ${u.birim}</span></div>`
+       :`<div class="field full"><label>Barkod ${esc(code)} — ürün seç</label><select id="ik_sel"><option value="">Seç...</option>${DB.urunler.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select></div>`}
+    <div class="field full"><label>Gelen miktar</label><input id="ik_qty" type="number" value="1" inputmode="numeric"></div>
+  </div>`;
+  openModal('Mal kabul',body,()=>{
+    let u2=pendingProduct; if(!u2){const id=val('ik_sel');if(!id)return toast('Ürün seçin');u2=urun(id);u2.barkod=code;}
+    const q=parseInt(val('ik_qty'))||1; applyIntake(u2,q); finishIntake();
+  },'Ekle');
+}
+function finishIntake(){
+  intakeMode=false; closeScanner();
+  const n=intakeLog.reduce((a,x)=>a+x.q,0); viewStok();
+  if(intakeLog.length){openModal('Mal kabul özeti',`<div class="alist">${intakeLog.map(x=>`<div class="intake-item"><b>${esc(x.ad)}</b><span class="intake-badge">+${NUM(x.q)} ${x.birim}</span></div>`).join('')}</div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-weight:800"><span>Toplam</span><span>${intakeLog.length} kalem · ${NUM(n)} adet</span></div>`,()=>closeModal(),'Tamam');}
 }
 
 /* ============================================================
