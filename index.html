@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Donmuş Ürünler · Dağıtım Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --ink:#10262B; --ink-2:#31474C;
+  --petrol:#0E6E77; --petrol-d:#0A555C; --petrol-l:#E4F0F0;
+  --frost:#EEF3F3; --surface:#FFFFFF; --line:#DBE7E7;
+  --muted:#5F7378;
+  --fresh:#1E9E6A; --fresh-l:#E4F4EC;
+  --alert:#D9553F; --alert-l:#FADFDA;
+  --amber:#C9871F; --amber-l:#F8EED5;
+  --radius:14px; --shadow:0 1px 2px rgba(16,38,43,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Manrope',system-ui,sans-serif;
+  background:var(--frost); color:var(--ink);
+  font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  font-feature-settings:"tnum" 0;
+}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:14px}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.mono-n{font-variant-numeric:tabular-nums}
+
+/* ---------- Layout ---------- */
+.app{display:grid;grid-template-columns:246px 1fr;min-height:100vh}
+.sidebar{
+  background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:20px 18px 16px}
+.brand .mark{
+  width:38px;height:38px;border-radius:11px;flex:none;
+  background:linear-gradient(150deg,var(--petrol),#0B838C);
+  display:grid;place-items:center;color:#fff;box-shadow:0 3px 8px rgba(14,110,119,.28)
+}
+.brand .mark svg{width:21px;height:21px}
+.brand b{font-size:15px;font-weight:800;letter-spacing:-.2px;line-height:1.15;display:block}
+.brand span{font-size:11.5px;color:var(--muted);font-weight:600}
+nav{padding:6px 12px;overflow-y:auto;flex:1}
+.nav-lbl{font-size:11px;font-weight:700;color:var(--muted);padding:12px 10px 6px;letter-spacing:.02em}
+.nav-item{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  padding:9px 11px;border:0;background:transparent;border-radius:10px;
+  color:var(--ink-2);font-size:13.5px;font-weight:600;margin-bottom:1px;
+}
+.nav-item svg{width:18px;height:18px;flex:none;opacity:.85}
+.nav-item:hover{background:var(--petrol-l)}
+.nav-item.active{background:var(--petrol-l);color:var(--petrol-d);font-weight:700}
+.nav-item.active svg{opacity:1}
+.side-foot{padding:14px 16px;border-top:1px solid var(--line)}
+.mode-chip{
+  display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;
+  color:var(--amber);background:var(--amber-l);padding:8px 11px;border-radius:9px;
+}
+.mode-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none}
+.side-foot small{display:block;color:var(--muted);font-size:10.5px;margin-top:8px;line-height:1.45;font-weight:500}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{
+  position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;padding:0 24px;height:62px;
+}
+.hamb{display:none;border:1px solid var(--line);background:var(--surface);width:38px;height:38px;border-radius:10px}
+.hamb svg{width:19px;height:19px}
+.page-title{font-size:18px;font-weight:800;letter-spacing:-.3px}
+.topbar .spacer{flex:1}
+.today{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.view{padding:22px 24px 40px;max-width:1280px;width:100%}
+
+/* ---------- Buttons ---------- */
+.btn{border:1px solid transparent;border-radius:10px;padding:9px 15px;font-size:13.5px;font-weight:700;display:inline-flex;align-items:center;gap:7px;line-height:1;white-space:nowrap}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:var(--petrol);color:#fff}
+.btn-primary:hover{background:var(--petrol-d)}
+.btn-ghost{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
+.btn-ghost:hover{border-color:#c3d3d3;background:#fbfdfd}
+.btn-danger{background:var(--alert);color:#fff}
+.btn-sm{padding:6px 11px;font-size:12.5px;border-radius:8px}
+.icon-btn{border:1px solid var(--line);background:var(--surface);width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--muted)}
+.icon-btn:hover{color:var(--petrol);border-color:#c3d3d3}
+.icon-btn svg{width:15px;height:15px}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:13px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px 15px 18px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--petrol)}
+.kpi.k-fresh::before{background:var(--fresh)}
+.kpi.k-alert::before{background:var(--alert)}
+.kpi.k-amber::before{background:var(--amber)}
+.kpi.k-ink::before{background:var(--ink)}
+.kpi .lbl{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px}
+.kpi .val{font-size:25px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.kpi .sub{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:7px}
+.kpi .sub b{color:var(--ink-2)}
+
+/* ---------- Panels ---------- */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;min-width:0}
+.panel-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
+.panel-h h3{margin:0;font-size:14.5px;font-weight:700;letter-spacing:-.2px}
+.panel-h .sub{font-size:12px;color:var(--muted);font-weight:600}
+
+/* ---------- Toolbar ---------- */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search{position:relative;flex:1;min-width:180px;max-width:340px}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
+.search input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+.search input:focus{outline:none;border-color:var(--petrol);box-shadow:0 0 0 3px var(--petrol-l)}
+.seg{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--petrol-l);color:var(--petrol-d)}
+
+/* ---------- Tables ---------- */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{width:100%;border-collapse:collapse;min-width:520px}
+th{text-align:left;font-size:11.5px;font-weight:700;color:var(--muted);padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:#fafcfc}
+td{padding:12px 14px;border-bottom:1px solid #eef4f4;font-size:13.5px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#f7fbfb}
+th.r,td.r{text-align:right}
+.t-name{font-weight:700;color:var(--ink)}
+.t-sub{font-size:11.5px;color:var(--muted);font-weight:500}
+.row-act{display:flex;gap:6px;justify-content:flex-end}
+
+/* ---------- Badges ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.b-ok{background:var(--fresh-l);color:#157A50}
+.b-warn{background:var(--amber-l);color:#946213}
+.b-bad{background:var(--alert-l);color:#B23A26}
+.b-neu{background:var(--petrol-l);color:var(--petrol-d)}
+.b-mut{background:#eef2f2;color:var(--muted)}
+.dot-b{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pos{color:var(--fresh);font-weight:700}
+.neg{color:var(--alert);font-weight:700}
+
+/* ---------- Charts ---------- */
+.bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:8px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0}
+.bar-fill{width:100%;max-width:46px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#1f97a0,var(--petrol));min-height:4px;transition:height .5s ease}
+.bar-x{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
+.bar-v{font-size:11px;font-weight:700;color:var(--ink-2)}
+.hbars{display:flex;flex-direction:column;gap:12px}
+.hbar .hb-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+.hbar .hb-top b{font-weight:700}.hbar .hb-top span{color:var(--muted);font-weight:600}
+.hb-track{height:8px;background:var(--frost);border-radius:999px;overflow:hidden}
+.hb-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--petrol),#2aa7b0)}
+
+/* ---------- Activity / lists ---------- */
+.alist{display:flex;flex-direction:column}
+.arow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #eef4f4}
+.arow:last-child{border-bottom:0}
+.aic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none}
+.aic svg{width:16px;height:16px}
+.aic.in{background:var(--fresh-l);color:#157A50}
+.aic.out{background:var(--alert-l);color:#B23A26}
+.aic.buy{background:var(--petrol-l);color:var(--petrol-d)}
+.arow .at{flex:1;min-width:0}
+.arow .at b{font-weight:700;font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arow .at span{font-size:11.5px;color:var(--muted);font-weight:500}
+.arow .av{font-weight:800;font-size:14px;white-space:nowrap}
+
+/* critical list */
+.crit{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eef4f4}
+.crit:last-child{border-bottom:0}
+.crit .cn{font-weight:700;font-size:13.5px}
+.crit .cc{font-size:11.5px;color:var(--muted);font-weight:500}
+
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty svg{width:34px;height:34px;opacity:.5;margin-bottom:12px}
+.empty b{display:block;color:var(--ink-2);font-size:14.5px;margin-bottom:5px;font-weight:700}
+.empty p{margin:0 0 16px;font-size:13px}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(16,38,43,.46);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;opacity:0;pointer-events:none;transition:opacity .16s}
+.overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border-radius:18px;width:100%;max-width:560px;box-shadow:0 20px 50px rgba(16,38,43,.24);transform:translateY(8px);transition:transform .18s}
+.overlay.show .modal{transform:none}
+.modal.wide{max-width:720px}
+.m-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.m-head h3{margin:0;font-size:16px;font-weight:800;letter-spacing:-.2px}
+.m-body{padding:20px 22px;max-height:66vh;overflow-y:auto}
+.m-foot{padding:15px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;font-weight:700;color:var(--ink-2)}
+.field input,.field select,.field textarea{
+  padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);width:100%
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--petrol);box-shadow:0 0 0 3px var(--petrol-l)}
+.field .hint{font-size:11px;color:var(--muted);font-weight:500}
+
+/* items editor */
+.items-box{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.item-row{display:grid;grid-template-columns:1fr 74px 90px 90px 32px;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid #eef4f4}
+.item-row:last-child{border-bottom:0}
+.item-row select,.item-row input{padding:7px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;width:100%}
+.item-row .lt{font-size:12.5px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.item-row .rm{border:0;background:var(--alert-l);color:#B23A26;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:15px;line-height:1}
+.item-head{display:grid;grid-template-columns:1fr 74px 90px 90px 32px;gap:8px;padding:8px 10px;background:#fafcfc;font-size:10.5px;font-weight:700;color:var(--muted)}
+.item-add{padding:9px 10px;background:#fafcfc}
+.item-total{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--petrol-l);border-radius:10px;margin-top:12px;font-weight:800}
+.item-total .tv{font-size:18px}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:11px;font-weight:700;font-size:13.5px;z-index:200;opacity:0;pointer-events:none;transition:all .22s;box-shadow:0 10px 30px rgba(16,38,43,.3);display:flex;align-items:center;gap:9px}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast svg{width:17px;height:17px;color:var(--fresh)}
+
+.backdrop{display:none}
+kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;font-family:inherit;color:var(--ink-2)}
+
+/* ---------- Responsive ---------- */
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:0;top:0;width:264px;z-index:120;transform:translateX(-100%);transition:transform .22s;box-shadow:0 0 40px rgba(16,38,43,.15)}
+  .sidebar.open{transform:none}
+  .backdrop{display:block;position:fixed;inset:0;background:rgba(16,38,43,.4);z-index:110;opacity:0;pointer-events:none;transition:opacity .2s}
+  .backdrop.show{opacity:1;pointer-events:auto}
+  .hamb{display:grid;place-items:center}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .view{padding:16px 15px 40px}
+  .topbar{padding:0 15px}
+  .today{display:none}
+  .form-grid{grid-template-columns:1fr}
+  .item-row,.item-head{grid-template-columns:1fr 58px 76px 32px}
+  .item-row .lt,.item-head span:nth-child(4){display:none}
+}
+@media(min-width:901px){.hamb{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19"/></svg></div>
+      <div><b>Soğuk Zincir</b><span>Dağıtım Paneli</span></div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <div class="mode-chip"><span class="dot"></span> Yerel demo modu</div>
+      <small>Veriler bu cihazda tutuluyor. Sonraki adım: Supabase ile buluta taşıma.</small>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop" onclick="toggleNav(false)"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="hamb" onclick="toggleNav(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <div class="page-title" id="pageTitle">Panel</div>
+      <div class="spacer"></div>
+      <div class="today" id="today"></div>
+      <div id="topAction"></div>
+    </header>
+    <div class="view" id="view"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA LAYER  — localStorage now; structured so a Supabase
+   adapter can replace Store internals without touching the UI.
+   Tables mirror the planned Supabase schema.
+============================================================ */
+const KEY='donmus_panel_v1';
+let DB=null;
+
+const uid=p=>p+Math.random().toString(36).slice(2,8);
+const daysAgo=n=>{const d=new Date();d.setDate(d.getDate()-n);d.setHours(10,0,0,0);return d.toISOString();};
+const monthStart=off=>{const d=new Date();d.setMonth(d.getMonth()-off);d.setDate(2);d.setHours(9,0,0,0);return d.toISOString();};
+
+function seed(){
+  // [ad, alış, satış, stok, kritik]
+  const raw=[
+    ['Piliç Baget',78,92,42,15],['Yarım Flato',70,84,8,15],['Bütün Piliç',82,96,55,15],
+    ['But Pirzola',95,112,24,15],['Sırtsız Üst But',130,152,12,15],['Izgara Üst Kanat',88,104,30,15],
+    ['Ciğer & Yürek',45,58,18,15],['Taşlık',60,74,26,15],['Sırt Pirzola',92,108,5,15]
+  ];
+  const hazir=[
+    ['Yaprak Döner 200gr',42,54,60,20],['Karışık Döner 300gr',58,72,45,20],['Piliç Kasap Köfte 300gr',48,60,80,20],
+    ['Nugget 300gr',44,56,15,20],['Parmak Köfte 400gr',62,78,38,20],['Acılı Köfte 400gr',62,78,22,20],
+    ['Piliç Kasap Köfte 350gr',55,68,50,20],['Parmak Patates 1000gr',68,85,90,20],['Piliç Kasap Köfte 1000gr',145,175,34,20],
+    ['Piliç Acılı Kebab 1000gr',150,182,28,20],['Piliç Nugget 1000gr',138,168,40,20],['Shinitzel 1080gr',165,198,12,20],
+    ['Kıymalı Mantı 400gr',52,66,44,20],['Kalem Böreği 400gr',48,60,33,20]
+  ];
+  const deli=[
+    ['Milföy Hamuru 1000gr',58,72,26,20],['Kokteyl Sosis 500gr',62,78,48,20],['Kokteyl Sosis 250gr',36,46,62,20],
+    ['Dilimli Sucuk 400gr',88,108,30,20],['Piliç Salam 250gr',34,44,18,20],['Piliç Salam 750gr',92,112,25,20]
+  ];
+  const urunler=[];
+  const push=(arr,kat,birim)=>arr.forEach(r=>urunler.push({
+    id:uid('p'),ad:r[0],kategori:kat,birim:birim,alis:r[1],satis:r[2],stok:r[3],kritik:r[4],kdv:1
+  }));
+  push(raw,'Çiğ Tavuk','kg'); push(hazir,'Hazır Ürün','adet'); push(deli,'Şarküteri & Diğer','adet');
+
+  const musteriler=[
+    {id:uid('c'),unvan:'Lezzet Durağı Restoran',tip:'restoran',yetkili:'Ahmet Yıldız',telefon:'0532 411 88 20',adres:'Fatih, İstanbul',vd:'Fatih',vno:'1234567890',acilis:0},
+    {id:uid('c'),unvan:'Anadolu Market',tip:'market',yetkili:'Mehmet Kaya',telefon:'0533 622 14 07',adres:'Fındıkzade, İstanbul',vd:'Fındıkzade',vno:'2345678901',acilis:1500},
+    {id:uid('c'),unvan:'Köşe Büfe',tip:'büfe',yetkili:'Ali Demir',telefon:'0505 733 90 55',adres:'Aksaray, İstanbul',vd:'',vno:'',acilis:0},
+    {id:uid('c'),unvan:'Marmara Lokantası',tip:'restoran',yetkili:'Hasan Çelik',telefon:'0542 118 46 33',adres:'Cerrahpaşa, İstanbul',vd:'Cerrahpaşa',vno:'3456789012',acilis:0},
+    {id:uid('c'),unvan:'Günaydın Kahvaltı Salonu',tip:'restoran',yetkili:'Zeynep Şahin',telefon:'0536 240 71 18',adres:'Kocamustafapaşa, İstanbul',vd:'Kocamustafapaşa',vno:'4567890123',acilis:800},
+    {id:uid('c'),unvan:'Şahin Toptan Gıda',tip:'market',yetkili:'Osman Şahin',telefon:'0538 905 62 44',adres:'Bayrampaşa, İstanbul',vd:'Bayrampaşa',vno:'5678901234',acilis:0}
+  ];
+  const tedarikciler=[
+    {id:uid('t'),ad:'Öztürk Tavuk & Et Ürünleri',telefon:'0212 555 30 10',adres:'Esenyurt Toptancılar Sitesi',not:'Ana tedarikçi — haftalık teslimat'},
+    {id:uid('t'),ad:'Marmara Donuk Gıda A.Ş.',telefon:'0216 444 71 22',adres:'Tuzla Organize Sanayi',not:'Hazır ürün ve şarküteri'}
+  ];
+  const P=urunler, C=musteriler;
+  const satislar=[], stokHar=[], cariHar=[];
+
+  function sale(off,cIdx,items,tip,ratio){
+    const kalemler=items.map(([pi,q])=>({urunId:P[pi].id,ad:P[pi].ad,miktar:q,fiyat:P[pi].satis,birim:P[pi].birim}));
+    const toplam=kalemler.reduce((s,k)=>s+k.miktar*k.fiyat,0);
+    const odenen= tip==='pesin'?toplam : tip==='veresiye'?0 : Math.round(toplam*ratio);
+    const id=uid('s'), tarih=daysAgo(off), m=C[cIdx];
+    satislar.push({id,tarih,musteriId:m.id,musteri:m.unvan,kalemler,toplam,odemeTipi:tip,odenen,teslimat:'teslim edildi'});
+    kalemler.forEach(k=>stokHar.push({id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'cikis',miktar:k.miktar,aciklama:'Satış · '+m.unvan,ref:id}));
+    if(toplam-odenen>0.5) cariHar.push({id:uid('cr'),tarih,musteriId:m.id,tip:'borc',tutar:toplam-odenen,aciklama:'Satış (veresiye)',ref:id});
+  }
+  sale(0,0,[[9,6],[11,4],[24,3]],'pesin');
+  sale(0,2,[[25,10],[27,6]],'pesin');
+  sale(1,1,[[0,15],[2,10]],'veresiye');
+  sale(2,3,[[16,8],[20,3],[18,4]],'kismi',.5);
+  sale(3,4,[[9,10],[13,6]],'pesin');
+  sale(5,5,[[17,6],[19,5],[23,8]],'veresiye');
+  sale(8,0,[[10,5],[12,7]],'pesin');
+  sale(12,1,[[5,12],[7,10]],'veresiye');
+  sale(20,3,[[26,10],[28,5]],'pesin');
+  sale(34,4,[[9,20],[16,6]],'pesin');
+  sale(41,5,[[18,8],[21,10]],'veresiye');
+
+  // standalone tahsilat
+  cariHar.push({id:uid('cr'),tarih:daysAgo(0),musteriId:C[1].id,tip:'tahsilat',tutar:1000,aciklama:'Nakit tahsilat'});
+  cariHar.push({id:uid('cr'),tarih:daysAgo(4),musteriId:C[4].id,tip:'tahsilat',tutar:800,aciklama:'Havale'});
+
+  const T=tedarikciler;
+  const alimlar=[];
+  function buy(off,tIdx,items,odendi){
+    const kalemler=items.map(([pi,q])=>({urunId:P[pi].id,ad:P[pi].ad,miktar:q,fiyat:P[pi].alis,birim:P[pi].birim}));
+    const toplam=kalemler.reduce((s,k)=>s+k.miktar*k.fiyat,0);
+    const id=uid('a'),tarih=daysAgo(off),td=T[tIdx];
+    alimlar.push({id,tarih,tedarikciId:td.id,tedarikci:td.ad,kalemler,toplam,odeme:odendi?'ödendi':'bekliyor'});
+    kalemler.forEach(k=>stokHar.push({id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'giris',miktar:k.miktar,aciklama:'Alım · '+td.ad,ref:id}));
+  }
+  buy(3,0,[[0,50],[2,40],[9,60]],true);
+  buy(10,1,[[17,30],[19,25]],true);
+  buy(1,0,[[25,40],[27,30]],false);
+
+  const personel=[
+    {id:uid('pr'),ad:'Yusuf Aydın',telefon:'0532 700 11 22',pozisyon:'şoför',giris:'2023-04-10',cikis:'',maas:24000,durum:'aktif',not:'Dağıtım aracı'},
+    {id:uid('pr'),ad:'Emre Koç',telefon:'0533 811 45 60',pozisyon:'depo',giris:'2022-11-01',cikis:'',maas:22000,durum:'aktif',not:''},
+    {id:uid('pr'),ad:'Selin Ak',telefon:'0505 236 90 71',pozisyon:'satış',giris:'2024-02-15',cikis:'',maas:26000,durum:'aktif',not:'Müşteri ilişkileri'}
+  ];
+  const giderler=[
+    {id:uid('g'),tarih:daysAgo(0),kategori:'yakıt',tutar:850,aciklama:'Araç yakıt',odeme:'ödendi',personelId:''},
+    {id:uid('g'),tarih:daysAgo(2),kategori:'yakıt',tutar:700,aciklama:'Araç yakıt',odeme:'ödendi',personelId:''},
+    {id:uid('g'),tarih:daysAgo(1),kategori:'kira',tutar:18000,aciklama:'Depo & dükkan kirası',odeme:'bekliyor',personelId:''},
+    {id:uid('g'),tarih:daysAgo(5),kategori:'elektrik',tutar:4200,aciklama:'Soğuk depo elektrik',odeme:'ödendi',personelId:''},
+    {id:uid('g'),tarih:daysAgo(7),kategori:'araç bakım',tutar:1500,aciklama:'Periyodik bakım',odeme:'ödendi',personelId:''},
+    {id:uid('g'),tarih:monthStart(0),kategori:'maaş',tutar:24000,aciklama:'Maaş · Yusuf Aydın',odeme:'ödendi',personelId:personel[0].id},
+    {id:uid('g'),tarih:monthStart(0),kategori:'maaş',tutar:22000,aciklama:'Maaş · Emre Koç',odeme:'ödendi',personelId:personel[1].id},
+    {id:uid('g'),tarih:monthStart(0),kategori:'maaş',tutar:26000,aciklama:'Maaş · Selin Ak',odeme:'ödendi',personelId:personel[2].id}
+  ];
+  return {urunler,musteriler,tedarikciler,satislar,alimlar,stokHar,cariHar,giderler,personel};
+}
+
+const Store={
+  load(){ const r=localStorage.getItem(KEY); DB = r?JSON.parse(r):seed(); if(!r)Store.save();
+    if(DB&&!DB._kdv1){ (DB.urunler||[]).forEach(u=>{ if(u.kdv===10)u.kdv=1; }); DB._kdv1=true; Store.save(); } },
+  save(){ localStorage.setItem(KEY,JSON.stringify(DB)); },
+  reset(){ DB=seed(); Store.save(); },
+  wipe(){ DB={urunler:DB.urunler,musteriler:[],tedarikciler:DB.tedarikciler,satislar:[],alimlar:[],stokHar:[],cariHar:[],giderler:[],personel:[]}; Store.save(); }
+};
+
+/* ============================================================
+   HELPERS
+============================================================ */
+const $=s=>document.querySelector(s);
+const TL=n=>(Math.round((n||0)*100)/100).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';
+const TL0=n=>Math.round(n||0).toLocaleString('tr-TR')+' ₺';
+const NUM=n=>(n||0).toLocaleString('tr-TR');
+const DATE=d=>new Date(d).toLocaleDateString('tr-TR');
+const todayISO=()=>new Date().toISOString().slice(0,10);
+const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
+const thisMonth=d=>{const x=new Date(d),n=new Date();return x.getMonth()===n.getMonth()&&x.getFullYear()===n.getFullYear();};
+const urun=id=>DB.urunler.find(u=>u.id===id);
+const musteri=id=>DB.musteriler.find(c=>c.id===id);
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function cariBakiye(cId){
+  const m=musteri(cId); if(!m)return 0;
+  let b=m.acilis||0;
+  DB.cariHar.filter(h=>h.musteriId===cId).forEach(h=>{ b+= h.tip==='borc'?h.tutar:-h.tutar; });
+  return b;
+}
+function stokDegeri(){ return DB.urunler.reduce((s,u)=>s+u.stok*u.alis,0); }
+function kritikler(){ return DB.urunler.filter(u=>u.stok<=u.kritik); }
+function cogs(sale){ return sale.kalemler.reduce((s,k)=>{const u=urun(k.urunId);return s+(u?u.alis:0)*k.miktar;},0); }
+
+/* ICONS */
+const I={
+  panel:'<path d="M3 3h7v7H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 14h7v7H3z"/>',
+  urunler:'<path d="M21 8V7l-9-4-9 4v10l9 4 9-4V8zM3 7l9 4 9-4M12 22V11"/>',
+  stok:'<path d="M12 3l9 4-9 4-9-4 9-4zM3 12l9 4 9-4M3 17l9 4 9-4"/>',
+  alim:'<path d="M1 3h13v10H1zM14 8h5l3 3v3h-8M5.5 18a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM17.5 18a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/>',
+  musteriler:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/>',
+  satis:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/>',
+  cari:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4M3 5v14a2 2 0 0 0 2 2h16v-5M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+  gider:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  personel:'<path d="M3 4h18v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM5 17c.5-2 2-3 4-3s3.5 1 4 3M15 9h4M15 13h3"/>',
+  rapor:'<path d="M3 3v18h18M7 15v3M12 9v9M17 5v13"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  edit:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  trash:'<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  cash:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  down:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+  up:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',
+  search:'<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/>'
+};
+const svg=(p,w=20)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px">${p}</svg>`;
+
+const badgeTeslim=t=>t==='teslim edildi'?`<span class="badge b-ok"><span class="dot-b"></span>Teslim edildi</span>`:`<span class="badge b-warn"><span class="dot-b"></span>Bekliyor</span>`;
+const badgeOdeme=(tip)=>tip==='pesin'?`<span class="badge b-ok">Peşin</span>`:tip==='veresiye'?`<span class="badge b-bad">Veresiye</span>`:`<span class="badge b-warn">Kısmi</span>`;
+const badgeGiderOdeme=o=>o==='ödendi'?`<span class="badge b-ok">Ödendi</span>`:`<span class="badge b-warn">Bekliyor</span>`;
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+const VIEWS=[
+  {id:'panel',t:'Panel',ic:'panel',grp:0},
+  {id:'urunler',t:'Ürünler',ic:'urunler',grp:1},
+  {id:'stok',t:'Stok',ic:'stok',grp:1},
+  {id:'alim',t:'Alımlar',ic:'alim',grp:1},
+  {id:'musteriler',t:'Müşteriler',ic:'musteriler',grp:2},
+  {id:'satis',t:'Satışlar',ic:'satis',grp:2},
+  {id:'cari',t:'Cari Hesap',ic:'cari',grp:2},
+  {id:'gider',t:'Giderler',ic:'gider',grp:3},
+  {id:'personel',t:'Personel',ic:'personel',grp:3},
+  {id:'rapor',t:'Raporlar',ic:'rapor',grp:3}
+];
+const GRP=['','Envanter','Satış & Cari','İşletme'];
+let current='panel';
+
+function buildNav(){
+  let h='',last=-1;
+  VIEWS.forEach(v=>{
+    if(v.grp!==last){ if(v.grp>0)h+=`<div class="nav-lbl">${GRP[v.grp]}</div>`; last=v.grp; }
+    h+=`<button class="nav-item${v.id===current?' active':''}" onclick="go('${v.id}')">${svg(I[v.ic],18)}<span>${v.t}</span></button>`;
+  });
+  $('#nav').innerHTML=h;
+}
+function toggleNav(o){ $('#sidebar').classList.toggle('open',o); $('#backdrop').classList.toggle('show',o); }
+function go(id){ current=id; buildNav(); toggleNav(false); render(); window.scrollTo(0,0); }
+
+const ACTIONS={
+  urunler:['Yeni ürün',()=>formUrun()],
+  musteriler:['Yeni müşteri',()=>formMusteri()],
+  satis:['Yeni satış',()=>formSatis()],
+  alim:['Yeni alım',()=>formAlim()],
+  cari:['Tahsilat gir',()=>formTahsilat()],
+  gider:['Yeni gider',()=>formGider()],
+  personel:['Personel ekle',()=>formPersonel()],
+  panel:['Yeni satış',()=>formSatis()]
+};
+
+function render(){
+  const v=VIEWS.find(x=>x.id===current);
+  $('#pageTitle').textContent=v.t;
+  const a=ACTIONS[current];
+  $('#topAction').innerHTML = a?`<button class="btn btn-primary" onclick="ACTIONS['${current}'][1]()">${svg(I.plus,16)}${a[0]}</button>`:'';
+  ({panel:viewPanel,urunler:viewUrunler,stok:viewStok,alim:viewAlim,musteriler:viewMusteriler,satis:viewSatis,cari:viewCari,gider:viewGider,personel:viewPersonel,rapor:viewRapor}[current])();
+}
+
+/* ============================================================
+   VIEW: PANEL
+============================================================ */
+function viewPanel(){
+  const bugunSatis=DB.satislar.filter(s=>sameDay(s.tarih,new Date())).reduce((a,s)=>a+s.toplam,0);
+  const bugunTahsilat=DB.cariHar.filter(h=>h.tip==='tahsilat'&&sameDay(h.tarih,new Date())).reduce((a,h)=>a+h.tutar,0);
+  const acikAlacak=DB.musteriler.reduce((a,c)=>{const b=cariBakiye(c.id);return a+(b>0?b:0);},0);
+  const krit=kritikler();
+  const ayCiro=DB.satislar.filter(s=>thisMonth(s.tarih)).reduce((a,s)=>a+s.toplam,0);
+  const ayGider=DB.giderler.filter(g=>thisMonth(g.tarih)).reduce((a,g)=>a+g.tutar,0);
+  const ayCogs=DB.satislar.filter(s=>thisMonth(s.tarih)).reduce((a,s)=>a+cogs(s),0);
+  const brut=ayCiro-ayCogs, net=brut-ayGider;
+
+  const kpi=(cls,lbl,val,sub)=>`<div class="kpi ${cls}"><div class="lbl">${lbl}</div><div class="val">${val}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+
+  // recent activity
+  const acts=[];
+  DB.satislar.forEach(s=>acts.push({d:s.tarih,type:'in',title:s.musteri,sub:'Satış · '+s.kalemler.length+' kalem',val:'+'+TL0(s.toplam)}));
+  DB.cariHar.filter(h=>h.tip==='tahsilat').forEach(h=>acts.push({d:h.tarih,type:'in',title:musteri(h.musteriId)?.unvan||'',sub:'Tahsilat',val:'+'+TL0(h.tutar)}));
+  DB.giderler.forEach(g=>acts.push({d:g.tarih,type:'out',title:g.aciklama,sub:'Gider · '+g.kategori,val:'−'+TL0(g.tutar)}));
+  DB.alimlar.forEach(a=>acts.push({d:a.tarih,type:'buy',title:a.tedarikci,sub:'Alım · '+a.kalemler.length+' kalem',val:TL0(a.toplam)}));
+  acts.sort((a,b)=>new Date(b.d)-new Date(a.d));
+
+  $('#view').innerHTML=`
+  <div class="kpis">
+    ${kpi('k-fresh','Bugünkü satış',TL0(bugunSatis),`Bugünkü tahsilat: <b>${TL0(bugunTahsilat)}</b>`)}
+    ${kpi('k-alert','Toplam açık alacak',TL0(acikAlacak),`${DB.musteriler.filter(c=>cariBakiye(c.id)>0).length} müşteride bakiye`)}
+    ${kpi('k-amber','Kritik stok',NUM(krit.length)+' ürün',krit.length?'Sipariş edilmeli':'Stok seviyesi iyi')}
+    ${kpi('k-ink','Stok değeri',TL0(stokDegeri()),`${DB.urunler.length} ürün · maliyet bazlı`)}
+  </div>
+  <div class="kpis">
+    ${kpi('','Bu ay ciro',TL0(ayCiro))}
+    ${kpi('','Bu ay gider',TL0(ayGider))}
+    ${kpi('k-fresh','Bu ay brüt kâr',TL0(brut),'Satış − mal maliyeti')}
+    ${kpi(net>=0?'k-fresh':'k-alert','Bu ay net kâr',TL0(net),'Brüt kâr − giderler')}
+  </div>
+
+  <div class="grid-3">
+    <div class="panel">
+      <div class="panel-h"><h3>Aylık satış trendi</h3><span class="sub">Son 6 ay</span></div>
+      ${trendChart()}
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Kritik stok</h3><span class="sub">${krit.length} ürün</span></div>
+      ${krit.length? krit.slice(0,7).map(u=>`<div class="crit"><div><div class="cn">${esc(u.ad)}</div><div class="cc">${u.kategori}</div></div><span class="badge b-bad">${NUM(u.stok)} ${u.birim}</span></div>`).join('')
+        : `<div class="empty" style="padding:24px"><b>Kritik stok yok</b><p>Tüm ürünler eşik seviyesinin üzerinde.</p></div>`}
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:16px">
+    <div class="panel">
+      <div class="panel-h"><h3>Açık alacaklar</h3><button class="btn btn-ghost btn-sm" onclick="go('cari')">Cari hesap →</button></div>
+      ${(()=>{const list=DB.musteriler.map(c=>({c,b:cariBakiye(c.id)})).filter(x=>x.b>0).sort((a,b)=>b.b-a.b);
+        return list.length? list.map(x=>`<div class="crit"><div><div class="cn">${esc(x.c.unvan)}</div><div class="cc">${x.c.tip}</div></div><span class="neg">${TL0(x.b)}</span></div>`).join('')
+        :`<div class="empty" style="padding:24px"><b>Açık alacak yok</b><p>Tüm müşteri hesapları kapalı.</p></div>`;})()}
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Son işlemler</h3></div>
+      <div class="alist">
+        ${acts.slice(0,6).map(a=>`<div class="arow">
+          <div class="aic ${a.type}">${svg(a.type==='in'?I.down:a.type==='out'?I.up:I.alim,16)}</div>
+          <div class="at"><b>${esc(a.title)}</b><span>${a.sub} · ${DATE(a.d)}</span></div>
+          <div class="av ${a.type==='in'?'pos':a.type==='out'?'neg':''}">${a.val}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function trendChart(){
+  const now=new Date(), months=[];
+  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({y:d.getFullYear(),m:d.getMonth(),lbl:d.toLocaleDateString('tr-TR',{month:'short'}),v:0});}
+  DB.satislar.forEach(s=>{const d=new Date(s.tarih);const mm=months.find(x=>x.y===d.getFullYear()&&x.m===d.getMonth());if(mm)mm.v+=s.toplam;});
+  const max=Math.max(...months.map(m=>m.v),1);
+  return `<div class="bars">${months.map(m=>`<div class="bar-col">
+    <div class="bar-v">${m.v?TL0(m.v).replace(' ₺','')+'₺':''}</div>
+    <div class="bar-fill" style="height:${Math.max(m.v/max*100,2)}%"></div>
+    <div class="bar-x">${m.lbl}</div></div>`).join('')}</div>`;
+}
+
+/* ============================================================
+   VIEW: ÜRÜNLER
+============================================================ */
+let urunFilter='all', urunQ='';
+function viewUrunler(){
+  const cats=['all','Çiğ Tavuk','Hazır Ürün','Şarküteri & Diğer'];
+  let list=DB.urunler.filter(u=>(urunFilter==='all'||u.kategori===urunFilter)&&u.ad.toLowerCase().includes(urunQ.toLowerCase()));
+  $('#view').innerHTML=`
+  <div class="toolbar">
+    <div class="search">${svg(I.search,16)}<input id="uq" placeholder="Ürün ara..." value="${esc(urunQ)}" oninput="urunQ=this.value;renderRowsUrun()"></div>
+    <div class="seg">${cats.map(c=>`<button class="${urunFilter===c?'on':''}" onclick="urunFilter='${c}';viewUrunler()">${c==='all'?'Tümü':c}</button>`).join('')}</div>
+  </div>
+  <div id="urunTable"></div>`;
+  renderRowsUrun();
+}
+function renderRowsUrun(){
+  let list=DB.urunler.filter(u=>(urunFilter==='all'||u.kategori===urunFilter)&&u.ad.toLowerCase().includes(urunQ.toLowerCase()));
+  const box=$('#urunTable'); if(!box)return;
+  if(!list.length){box.innerHTML=`<div class="panel"><div class="empty"><b>Ürün bulunamadı</b><p>Aramayı değiştirin ya da yeni ürün ekleyin.</p></div></div>`;return;}
+  box.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Ürün</th><th>Kategori</th><th>Birim</th><th class="r">Alış</th><th class="r">Satış</th><th class="r">Kâr</th><th class="r">Stok</th><th></th></tr></thead>
+    <tbody>${list.map(u=>{const kar=u.satis-u.alis,kp=u.alis?Math.round(kar/u.alis*100):0;const low=u.stok<=u.kritik;
+      return `<tr>
+        <td class="t-name">${esc(u.ad)}</td>
+        <td><span class="badge b-neu">${u.kategori}</span></td>
+        <td>${u.birim}</td>
+        <td class="r num">${TL(u.alis)}</td>
+        <td class="r num">${TL(u.satis)}</td>
+        <td class="r num pos">${TL(kar)} <span class="t-sub">%${kp}</span></td>
+        <td class="r num">${low?`<span class="badge b-bad">${NUM(u.stok)}</span>`:`<b>${NUM(u.stok)}</b>`}</td>
+        <td><div class="row-act">
+          <button class="icon-btn" title="Düzenle" onclick="formUrun('${u.id}')">${svg(I.edit,15)}</button>
+          <button class="icon-btn" title="Sil" onclick="delItem('urunler','${u.id}','${esc(u.ad)}')">${svg(I.trash,15)}</button>
+        </div></td></tr>`;}).join('')}</tbody></table></div>`;
+}
+
+/* ============================================================
+   VIEW: STOK
+============================================================ */
+function viewStok(){
+  const list=[...DB.urunler].sort((a,b)=>(a.stok<=a.kritik?-1:1)-(b.stok<=b.kritik?-1:1));
+  const har=[...DB.stokHar].sort((a,b)=>new Date(b.tarih)-new Date(a.tarih)).slice(0,12);
+  $('#view').innerHTML=`
+  <div class="grid-3">
+    <div class="panel" style="padding:0;overflow:hidden">
+      <div class="panel-h" style="padding:16px 18px 0"><h3>Stok durumu</h3><span class="sub">${kritikler().length} kritik</span></div>
+      <div class="table-wrap" style="border:0;margin-top:12px"><table>
+        <thead><tr><th>Ürün</th><th class="r">Stok</th><th class="r">Kritik</th><th class="r">Değer</th><th></th></tr></thead>
+        <tbody>${list.map(u=>{const low=u.stok<=u.kritik;return `<tr>
+          <td class="t-name">${esc(u.ad)}<div class="t-sub">${u.kategori}</div></td>
+          <td class="r num">${low?`<span class="badge b-bad">${NUM(u.stok)} ${u.birim}</span>`:`<b>${NUM(u.stok)}</b> <span class="t-sub">${u.birim}</span>`}</td>
+          <td class="r num t-sub">${NUM(u.kritik)}</td>
+          <td class="r num">${TL0(u.stok*u.alis)}</td>
+          <td><div class="row-act"><button class="btn btn-ghost btn-sm" onclick="formStok('${u.id}')">Hareket</button></div></td>
+        </tr>`;}).join('')}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Son stok hareketleri</h3></div>
+      <div class="alist">
+        ${har.length?har.map(h=>`<div class="arow">
+          <div class="aic ${h.tip==='giris'?'in':h.tip==='fire'?'out':'out'}">${svg(h.tip==='giris'?I.down:I.up,16)}</div>
+          <div class="at"><b>${esc(h.ad)}</b><span>${esc(h.aciklama)} · ${DATE(h.tarih)}</span></div>
+          <div class="av ${h.tip==='giris'?'pos':'neg'}">${h.tip==='giris'?'+':'−'}${NUM(h.miktar)}</div>
+        </div>`).join(''):`<div class="empty" style="padding:24px"><b>Hareket yok</b></div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   VIEW: ALIMLAR
+============================================================ */
+function viewAlim(){
+  const list=[...DB.alimlar].sort((a,b)=>new Date(b.tarih)-new Date(a.tarih));
+  const box=list.length?`<div class="table-wrap"><table>
+    <thead><tr><th>Tarih</th><th>Tedarikçi</th><th>Ürünler</th><th class="r">Tutar</th><th>Ödeme</th><th></th></tr></thead>
+    <tbody>${list.map(a=>`<tr>
+      <td class="num">${DATE(a.tarih)}</td>
+      <td class="t-name">${esc(a.tedarikci)}</td>
+      <td class="t-sub">${a.kalemler.map(k=>esc(k.ad)+' ×'+NUM(k.miktar)).join(', ')}</td>
+      <td class="r num"><b>${TL(a.toplam)}</b></td>
+      <td>${badgeGiderOdeme(a.odeme)}</td>
+      <td><div class="row-act"><button class="icon-btn" title="Sil" onclick="delAlim('${a.id}')">${svg(I.trash,15)}</button></div></td>
+    </tr>`).join('')}</tbody></table></div>`
+    :`<div class="panel"><div class="empty">${svg(I.alim,34)}<b>Henüz alım kaydı yok</b><p>Tedarikçiden gelen malı kaydedin; stok otomatik güncellenir.</p><button class="btn btn-primary" onclick="formAlim()">${svg(I.plus,16)}Yeni alım</button></div></div>`;
+  $('#view').innerHTML=`<div class="toolbar"><div style="font-size:13px;color:var(--muted);font-weight:600">Toplam ${list.length} alım · tedarikçiler <b style="color:var(--ink-2)">${DB.tedarikciler.length}</b></div><div class="spacer" style="flex:1"></div><button class="btn btn-ghost btn-sm" onclick="formTedarikci()">${svg(I.plus,15)}Tedarikçi ekle</button></div>${box}`;
+}
+
+/* ============================================================
+   VIEW: MÜŞTERİLER
+============================================================ */
+let musQ='';
+function viewMusteriler(){
+  $('#view').innerHTML=`
+  <div class="toolbar"><div class="search">${svg(I.search,16)}<input placeholder="Müşteri ara..." value="${esc(musQ)}" oninput="musQ=this.value;renderRowsMus()"></div></div>
+  <div id="musTable"></div>`;
+  renderRowsMus();
+}
+function renderRowsMus(){
+  const list=DB.musteriler.filter(c=>c.unvan.toLowerCase().includes(musQ.toLowerCase()));
+  const box=$('#musTable'); if(!box)return;
+  if(!list.length){box.innerHTML=`<div class="panel"><div class="empty">${svg(I.musteriler,34)}<b>Müşteri yok</b><p>İlk müşterinizi ekleyin.</p><button class="btn btn-primary" onclick="formMusteri()">${svg(I.plus,16)}Yeni müşteri</button></div></div>`;return;}
+  box.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Müşteri</th><th>Tip</th><th>Yetkili</th><th>Telefon</th><th class="r">Bakiye</th><th></th></tr></thead>
+    <tbody>${list.map(c=>{const b=cariBakiye(c.id);return `<tr>
+      <td class="t-name">${esc(c.unvan)}<div class="t-sub">${esc(c.adres)}</div></td>
+      <td><span class="badge b-neu">${c.tip}</span></td>
+      <td>${esc(c.yetkili)}</td>
+      <td class="num t-sub">${esc(c.telefon)}</td>
+      <td class="r num">${b>0?`<span class="neg">${TL0(b)}</span>`:b<0?`<span class="pos">${TL0(-b)} (alacaklı)</span>`:`<span class="t-sub">Kapalı</span>`}</td>
+      <td><div class="row-act">
+        <button class="icon-btn" title="Düzenle" onclick="formMusteri('${c.id}')">${svg(I.edit,15)}</button>
+        <button class="icon-btn" title="Sil" onclick="delItem('musteriler','${c.id}','${esc(c.unvan)}')">${svg(I.trash,15)}</button>
+      </div></td></tr>`;}).join('')}</tbody></table></div>`;
+}
+
+/* ============================================================
+   VIEW: SATIŞLAR
+============================================================ */
+function viewSatis(){
+  const list=[...DB.satislar].sort((a,b)=>new Date(b.tarih)-new Date(a.tarih));
+  const box=list.length?`<div class="table-wrap"><table>
+    <thead><tr><th>Tarih</th><th>Müşteri</th><th>Ürünler</th><th class="r">Tutar</th><th>Ödeme</th><th>Teslimat</th><th></th></tr></thead>
+    <tbody>${list.map(s=>`<tr>
+      <td class="num">${DATE(s.tarih)}</td>
+      <td class="t-name">${esc(s.musteri)}</td>
+      <td class="t-sub">${s.kalemler.map(k=>esc(k.ad)+' ×'+NUM(k.miktar)).join(', ')}</td>
+      <td class="r num"><b>${TL(s.toplam)}</b>${s.odemeTipi==='kismi'?`<div class="t-sub">Ödenen ${TL0(s.odenen)}</div>`:''}</td>
+      <td>${badgeOdeme(s.odemeTipi)}</td>
+      <td>${badgeTeslim(s.teslimat)}</td>
+      <td><div class="row-act"><button class="icon-btn" title="Sil" onclick="delSatis('${s.id}')">${svg(I.trash,15)}</button></div></td>
+    </tr>`).join('')}</tbody></table></div>`
+    :`<div class="panel"><div class="empty">${svg(I.satis,34)}<b>Henüz satış yok</b><p>İlk satışı oluşturun; stok ve cari otomatik işlensin.</p><button class="btn btn-primary" onclick="formSatis()">${svg(I.plus,16)}Yeni satış</button></div></div>`;
+  const bugun=DB.satislar.filter(s=>sameDay(s.tarih,new Date())).reduce((a,s)=>a+s.toplam,0);
+  $('#view').innerHTML=`<div class="toolbar"><div style="font-size:13px;color:var(--muted);font-weight:600">Bugün <b style="color:var(--fresh)">${TL0(bugun)}</b> · toplam ${list.length} satış</div></div>${box}`;
+}
+
+/* ============================================================
+   VIEW: CARİ
+============================================================ */
+function viewCari(){
+  const rows=DB.musteriler.map(c=>({c,b:cariBakiye(c.id)})).sort((a,b)=>b.b-a.b);
+  const toplam=rows.reduce((a,x)=>a+(x.b>0?x.b:0),0);
+  const har=[...DB.cariHar].sort((a,b)=>new Date(b.tarih)-new Date(a.tarih)).slice(0,10);
+  $('#view').innerHTML=`
+  <div class="kpis" style="margin-bottom:18px">
+    <div class="kpi k-alert"><div class="lbl">Toplam açık alacak</div><div class="val">${TL0(toplam)}</div><div class="sub">${rows.filter(x=>x.b>0).length} müşteride bakiye</div></div>
+    <div class="kpi k-fresh"><div class="lbl">Bu ay tahsilat</div><div class="val">${TL0(DB.cariHar.filter(h=>h.tip==='tahsilat'&&thisMonth(h.tarih)).reduce((a,h)=>a+h.tutar,0))}</div></div>
+  </div>
+  <div class="grid-3">
+    <div class="panel" style="padding:0;overflow:hidden">
+      <div class="panel-h" style="padding:16px 18px 0"><h3>Müşteri bakiyeleri</h3></div>
+      <div class="table-wrap" style="border:0;margin-top:12px"><table>
+        <thead><tr><th>Müşteri</th><th class="r">Bakiye</th><th></th></tr></thead>
+        <tbody>${rows.map(x=>`<tr>
+          <td class="t-name">${esc(x.c.unvan)}<div class="t-sub">${x.c.tip}</div></td>
+          <td class="r num">${x.b>0?`<span class="neg">${TL0(x.b)}</span>`:x.b<0?`<span class="pos">${TL0(-x.b)}</span>`:`<span class="t-sub">Kapalı</span>`}</td>
+          <td><div class="row-act"><button class="btn btn-ghost btn-sm" onclick="formTahsilat('${x.c.id}')">${svg(I.cash,15)}Tahsilat</button></div></td>
+        </tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Son cari hareketler</h3></div>
+      <div class="alist">
+        ${har.map(h=>`<div class="arow">
+          <div class="aic ${h.tip==='tahsilat'?'in':'out'}">${svg(h.tip==='tahsilat'?I.cash:I.up,16)}</div>
+          <div class="at"><b>${esc(musteri(h.musteriId)?.unvan||'')}</b><span>${h.tip==='tahsilat'?'Tahsilat':'Borç'} · ${DATE(h.tarih)}</span></div>
+          <div class="av ${h.tip==='tahsilat'?'pos':'neg'}">${h.tip==='tahsilat'?'−':'+'}${TL0(h.tutar)}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   VIEW: GİDERLER
+============================================================ */
+let giderF='all';
+function viewGider(){
+  const cats=['all','yakıt','maaş','kira','elektrik','araç bakım','fatura','diğer'];
+  let list=DB.giderler.filter(g=>giderF==='all'||g.kategori===giderF).sort((a,b)=>new Date(b.tarih)-new Date(a.tarih));
+  const ayTop=DB.giderler.filter(g=>thisMonth(g.tarih)).reduce((a,g)=>a+g.tutar,0);
+  const byCat={}; DB.giderler.filter(g=>thisMonth(g.tarih)).forEach(g=>byCat[g.kategori]=(byCat[g.kategori]||0)+g.tutar);
+  const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const maxC=Math.max(...catRows.map(c=>c[1]),1);
+  $('#view').innerHTML=`
+  <div class="grid-3">
+    <div>
+      <div class="toolbar"><div class="seg" style="flex-wrap:wrap">${cats.map(c=>`<button class="${giderF===c?'on':''}" onclick="giderF='${c}';viewGider()">${c==='all'?'Tümü':c}</button>`).join('')}</div></div>
+      ${list.length?`<div class="table-wrap"><table>
+        <thead><tr><th>Tarih</th><th>Açıklama</th><th>Kategori</th><th class="r">Tutar</th><th>Durum</th><th></th></tr></thead>
+        <tbody>${list.map(g=>`<tr>
+          <td class="num">${DATE(g.tarih)}</td>
+          <td class="t-name">${esc(g.aciklama)}</td>
+          <td><span class="badge b-mut">${g.kategori}</span></td>
+          <td class="r num"><b>${TL(g.tutar)}</b></td>
+          <td>${badgeGiderOdeme(g.odeme)}</td>
+          <td><div class="row-act"><button class="icon-btn" onclick="delItem('giderler','${g.id}','${esc(g.aciklama)}')">${svg(I.trash,15)}</button></div></td>
+        </tr>`).join('')}</tbody></table></div>`
+        :`<div class="panel"><div class="empty"><b>Gider kaydı yok</b><p>Yakıt, maaş, kira gibi giderleri buraya girin.</p></div></div>`}
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Bu ay giderler</h3><span class="sub">${TL0(ayTop)}</span></div>
+      <div class="hbars">
+        ${catRows.map(([k,v])=>`<div class="hbar"><div class="hb-top"><b>${k}</b><span>${TL0(v)}</span></div><div class="hb-track"><div class="hb-fill" style="width:${v/maxC*100}%"></div></div></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   VIEW: PERSONEL
+============================================================ */
+function viewPersonel(){
+  const list=[...DB.personel].sort((a,b)=>(a.durum==='aktif'?-1:1)-(b.durum==='aktif'?-1:1));
+  const aktif=DB.personel.filter(p=>p.durum==='aktif');
+  const maasTop=aktif.reduce((a,p)=>a+p.maas,0);
+  $('#view').innerHTML=`
+  <div class="kpis" style="margin-bottom:18px">
+    <div class="kpi"><div class="lbl">Aktif personel</div><div class="val">${NUM(aktif.length)}</div></div>
+    <div class="kpi k-ink"><div class="lbl">Aylık maaş yükü</div><div class="val">${TL0(maasTop)}</div><div class="sub">Aktif kadro</div></div>
+  </div>
+  ${list.length?`<div class="table-wrap"><table>
+    <thead><tr><th>Ad soyad</th><th>Pozisyon</th><th>Telefon</th><th>Giriş</th><th class="r">Maaş</th><th>Durum</th><th></th></tr></thead>
+    <tbody>${list.map(p=>`<tr>
+      <td class="t-name">${esc(p.ad)}${p.not?`<div class="t-sub">${esc(p.not)}</div>`:''}</td>
+      <td><span class="badge b-neu">${p.pozisyon}</span></td>
+      <td class="num t-sub">${esc(p.telefon)}</td>
+      <td class="num">${p.giris?DATE(p.giris):'—'}${p.cikis?`<div class="t-sub">Çıkış ${DATE(p.cikis)}</div>`:''}</td>
+      <td class="r num">${TL0(p.maas)}</td>
+      <td>${p.durum==='aktif'?`<span class="badge b-ok">Aktif</span>`:`<span class="badge b-mut">Ayrıldı</span>`}</td>
+      <td><div class="row-act">
+        <button class="icon-btn" title="Düzenle" onclick="formPersonel('${p.id}')">${svg(I.edit,15)}</button>
+        <button class="icon-btn" title="Sil" onclick="delItem('personel','${p.id}','${esc(p.ad)}')">${svg(I.trash,15)}</button>
+      </div></td></tr>`).join('')}</tbody></table></div>`
+    :`<div class="panel"><div class="empty">${svg(I.personel,34)}<b>Personel yok</b><p>Çalışanlarınızı ekleyin; maaşları gidere bağlanır.</p><button class="btn btn-primary" onclick="formPersonel()">${svg(I.plus,16)}Personel ekle</button></div></div>`}`;
+}
+
+/* ============================================================
+   VIEW: RAPORLAR
+============================================================ */
+function viewRapor(){
+  const ayCiro=DB.satislar.filter(s=>thisMonth(s.tarih)).reduce((a,s)=>a+s.toplam,0);
+  const ayCogs=DB.satislar.filter(s=>thisMonth(s.tarih)).reduce((a,s)=>a+cogs(s),0);
+  const ayGider=DB.giderler.filter(g=>thisMonth(g.tarih)).reduce((a,g)=>a+g.tutar,0);
+  const brut=ayCiro-ayCogs, net=brut-ayGider;
+  // top products
+  const prod={}; DB.satislar.forEach(s=>s.kalemler.forEach(k=>{prod[k.urunId]=(prod[k.urunId]||0)+k.miktar*k.fiyat;}));
+  const top=Object.entries(prod).map(([id,v])=>({u:urun(id),v})).filter(x=>x.u).sort((a,b)=>b.v-a.v).slice(0,7);
+  const maxP=Math.max(...top.map(t=>t.v),1);
+  // category
+  const cat={}; DB.satislar.forEach(s=>s.kalemler.forEach(k=>{const u=urun(k.urunId);if(u)cat[u.kategori]=(cat[u.kategori]||0)+k.miktar*k.fiyat;}));
+  const catTot=Object.values(cat).reduce((a,b)=>a+b,0)||1;
+  $('#view').innerHTML=`
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Bu ay ciro</div><div class="val">${TL0(ayCiro)}</div></div>
+    <div class="kpi k-ink"><div class="lbl">Mal maliyeti (SMM)</div><div class="val">${TL0(ayCogs)}</div></div>
+    <div class="kpi k-fresh"><div class="lbl">Brüt kâr</div><div class="val">${TL0(brut)}</div><div class="sub">%${ayCiro?Math.round(brut/ayCiro*100):0} marj</div></div>
+    <div class="kpi ${net>=0?'k-fresh':'k-alert'}"><div class="lbl">Net kâr</div><div class="val">${TL0(net)}</div><div class="sub">Giderler sonrası</div></div>
+  </div>
+  <div class="grid-3">
+    <div class="panel">
+      <div class="panel-h"><h3>Aylık satış trendi</h3><span class="sub">Son 6 ay</span></div>${trendChart()}
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Kâr dağılımı</h3><span class="sub">Bu ay</span></div>
+      <div class="hbars">
+        <div class="hbar"><div class="hb-top"><b>Mal maliyeti</b><span>${TL0(ayCogs)}</span></div><div class="hb-track"><div class="hb-fill" style="width:${ayCiro?ayCogs/ayCiro*100:0}%;background:var(--ink-2)"></div></div></div>
+        <div class="hbar"><div class="hb-top"><b>Giderler</b><span>${TL0(ayGider)}</span></div><div class="hb-track"><div class="hb-fill" style="width:${ayCiro?Math.min(ayGider/ayCiro*100,100):0}%;background:var(--amber)"></div></div></div>
+        <div class="hbar"><div class="hb-top"><b>Net kâr</b><span>${TL0(net)}</span></div><div class="hb-track"><div class="hb-fill" style="width:${ayCiro&&net>0?net/ayCiro*100:0}%;background:var(--fresh)"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top:16px">
+    <div class="panel">
+      <div class="panel-h"><h3>En çok satan ürünler</h3><span class="sub">Ciroya göre</span></div>
+      <div class="hbars">${top.length?top.map(t=>`<div class="hbar"><div class="hb-top"><b>${esc(t.u.ad)}</b><span>${TL0(t.v)}</span></div><div class="hb-track"><div class="hb-fill" style="width:${t.v/maxP*100}%"></div></div></div>`).join(''):'<div class="empty" style="padding:20px"><b>Veri yok</b></div>'}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Kategori bazında satış</h3></div>
+      <div class="hbars">${Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="hbar"><div class="hb-top"><b>${k}</b><span>${TL0(v)} · %${Math.round(v/catTot*100)}</span></div><div class="hb-track"><div class="hb-fill" style="width:${v/catTot*100}%"></div></div></div>`).join('')||'<div class="empty" style="padding:20px"><b>Veri yok</b></div>'}</div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-weight:700"><span>Stok değeri (maliyet)</span><span class="num">${TL0(stokDegeri())}</span></div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   MODAL / FORM ENGINE
+============================================================ */
+let onSubmit=null;
+function openModal(title,bodyHTML,submit,submitLbl='Kaydet',wide){
+  $('#modal').className='modal'+(wide?' wide':'');
+  $('#modal').innerHTML=`
+    <div class="m-head"><h3>${title}</h3><button class="icon-btn" onclick="closeModal()">✕</button></div>
+    <div class="m-body">${bodyHTML}</div>
+    <div class="m-foot"><button class="btn btn-ghost" onclick="closeModal()">Vazgeç</button><button class="btn btn-primary" onclick="submitModal()">${submitLbl}</button></div>`;
+  onSubmit=submit;
+  $('#overlay').classList.add('show');
+}
+function closeModal(){ $('#overlay').classList.remove('show'); onSubmit=null; }
+function submitModal(){ if(onSubmit)onSubmit(); }
+$('#overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+const val=id=>{const e=document.getElementById(id);return e?e.value.trim():'';};
+const numv=id=>{const e=document.getElementById(id);return e?parseFloat(e.value)||0:0;};
+function field(id,label,type='text',v='',opts){
+  if(type==='select')return `<div class="field"><label>${label}</label><select id="${id}">${opts.map(o=>`<option value="${o}"${o===v?' selected':''}>${o}</option>`).join('')}</select></div>`;
+  if(type==='textarea')return `<div class="field full"><label>${label}</label><textarea id="${id}" rows="2">${esc(v)}</textarea></div>`;
+  return `<div class="field"><label>${label}</label><input id="${id}" type="${type}" value="${esc(v)}"></div>`;
+}
+function toast(msg){ const t=$('#toast'); t.innerHTML=svg(I.check,17)+esc(msg); t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ---- ÜRÜN ---- */
+function formUrun(id){
+  const u=id?urun(id):{};
+  openModal(id?'Ürünü düzenle':'Yeni ürün',`<div class="form-grid">
+    ${field('u_ad','Ürün adı','text',u.ad||'').replace('class="field"','class="field full"')}
+    ${field('u_kat','Kategori','select',u.kategori||'Çiğ Tavuk',['Çiğ Tavuk','Hazır Ürün','Şarküteri & Diğer'])}
+    ${field('u_birim','Birim','select',u.birim||'adet',['adet','kg','koli'])}
+    ${field('u_alis','Alış fiyatı (₺)','number',u.alis||'')}
+    ${field('u_satis','Satış fiyatı (₺)','number',u.satis||'')}
+    ${field('u_stok','Stok','number',u.stok??'')}
+    ${field('u_kritik','Kritik stok eşiği','number',u.kritik??'')}
+    ${field('u_kdv','KDV %','number',u.kdv??1)}
+  </div>`,()=>{
+    if(!val('u_ad'))return toast('Ürün adı gerekli');
+    const o={ad:val('u_ad'),kategori:val('u_kat'),birim:val('u_birim'),alis:numv('u_alis'),satis:numv('u_satis'),stok:numv('u_stok'),kritik:numv('u_kritik'),kdv:numv('u_kdv')};
+    if(id)Object.assign(urun(id),o); else DB.urunler.push({id:uid('p'),...o});
+    Store.save();closeModal();toast(id?'Ürün güncellendi':'Ürün eklendi');viewUrunler();
+  });
+}
+
+/* ---- MÜŞTERİ ---- */
+function formMusteri(id){
+  const c=id?musteri(id):{};
+  openModal(id?'Müşteriyi düzenle':'Yeni müşteri',`<div class="form-grid">
+    ${field('c_unvan','Ünvan / işletme adı','text',c.unvan||'').replace('class="field"','class="field full"')}
+    ${field('c_tip','Müşteri tipi','select',c.tip||'restoran',['restoran','market','büfe','diğer'])}
+    ${field('c_yetkili','Yetkili','text',c.yetkili||'')}
+    ${field('c_tel','Telefon','text',c.telefon||'')}
+    ${field('c_adres','Adres / bölge','text',c.adres||'')}
+    ${field('c_vd','Vergi dairesi','text',c.vd||'')}
+    ${field('c_vno','Vergi / TC no','text',c.vno||'')}
+    ${field('c_acilis','Açılış bakiyesi (₺)','number',c.acilis||'')}
+    <div class="field full"><span class="hint">Açılış bakiyesi: müşterinin bugün itibarıyla mevcut borcu (varsa).</span></div>
+  </div>`,()=>{
+    if(!val('c_unvan'))return toast('Ünvan gerekli');
+    const o={unvan:val('c_unvan'),tip:val('c_tip'),yetkili:val('c_yetkili'),telefon:val('c_tel'),adres:val('c_adres'),vd:val('c_vd'),vno:val('c_vno'),acilis:numv('c_acilis')};
+    if(id)Object.assign(musteri(id),o); else DB.musteriler.push({id:uid('c'),...o});
+    Store.save();closeModal();toast(id?'Müşteri güncellendi':'Müşteri eklendi');viewMusteriler();
+  });
+}
+
+/* ---- TEDARİKÇİ ---- */
+function formTedarikci(){
+  openModal('Yeni tedarikçi',`<div class="form-grid">
+    ${field('td_ad','Tedarikçi adı','text','').replace('class="field"','class="field full"')}
+    ${field('td_tel','Telefon','text','')}
+    ${field('td_adres','Adres','text','')}
+    ${field('td_not','Not','textarea','')}
+  </div>`,()=>{
+    if(!val('td_ad'))return toast('Ad gerekli');
+    DB.tedarikciler.push({id:uid('t'),ad:val('td_ad'),telefon:val('td_tel'),adres:val('td_adres'),not:val('td_not')});
+    Store.save();closeModal();toast('Tedarikçi eklendi');viewAlim();
+  });
+}
+
+/* ---- STOK HAREKET ---- */
+function formStok(id){
+  const u=urun(id);
+  openModal('Stok hareketi · '+u.ad,`<div class="form-grid">
+    <div class="field full"><span class="hint">Mevcut stok: <b>${NUM(u.stok)} ${u.birim}</b></span></div>
+    ${field('h_tip','Hareket tipi','select','giris',['giris','cikis','fire'])}
+    ${field('h_miktar','Miktar','number','')}
+    ${field('h_acik','Açıklama','text','').replace('class="field"','class="field full"')}
+  </div>`,()=>{
+    const m=numv('h_miktar'),tip=val('h_tip');
+    if(m<=0)return toast('Miktar girin');
+    u.stok += tip==='giris'? m : -m;
+    if(u.stok<0)u.stok=0;
+    DB.stokHar.push({id:uid('h'),tarih:new Date().toISOString(),urunId:id,ad:u.ad,tip,miktar:m,aciklama:val('h_acik')||({giris:'Manuel giriş',cikis:'Manuel çıkış',fire:'Fire / zayi'}[tip])});
+    Store.save();closeModal();toast('Stok güncellendi');viewStok();
+  });
+}
+
+/* ---- ITEMS EDITOR (satış / alım) ---- */
+let itemsBuf=[], itemsMode='satis';
+function itemsEditorHTML(){
+  return `<div class="items-box" id="itemsBox">
+    <div class="item-head"><span>Ürün</span><span>Miktar</span><span>${itemsMode==='satis'?'Satış ₺':'Alış ₺'}</span><span>Tutar</span><span></span></div>
+    <div id="itemRows"></div>
+    <div class="item-add"><button class="btn btn-ghost btn-sm" type="button" onclick="addItemRow()">${svg(I.plus,15)}Satır ekle</button></div>
+  </div>
+  <div class="item-total"><span>Toplam</span><span class="tv" id="itemTotal">0,00 ₺</span></div>`;
+}
+function renderItemRows(){
+  const box=document.getElementById('itemRows'); if(!box)return;
+  box.innerHTML=itemsBuf.map((r,i)=>`<div class="item-row">
+    <select onchange="setItem(${i},'urunId',this.value)"><option value="">Seç...</option>${DB.urunler.map(u=>`<option value="${u.id}"${u.id===r.urunId?' selected':''}>${esc(u.ad)}</option>`).join('')}</select>
+    <input type="number" min="0" value="${r.miktar}" oninput="setItem(${i},'miktar',this.value)">
+    <input type="number" min="0" value="${r.fiyat}" oninput="setItem(${i},'fiyat',this.value)">
+    <div class="lt">${TL(r.miktar*r.fiyat)}</div>
+    <button class="rm" type="button" onclick="rmItem(${i})">×</button>
+  </div>`).join('');
+  document.getElementById('itemTotal').textContent=TL(itemsBuf.reduce((s,r)=>s+r.miktar*r.fiyat,0));
+}
+function addItemRow(){ itemsBuf.push({urunId:'',miktar:1,fiyat:0}); renderItemRows(); }
+function rmItem(i){ itemsBuf.splice(i,1); if(!itemsBuf.length)addItemRow(); else renderItemRows(); }
+function setItem(i,f,v){
+  if(f==='urunId'){ itemsBuf[i].urunId=v; const u=urun(v); if(u)itemsBuf[i].fiyat= itemsMode==='satis'?u.satis:u.alis; renderItemRows(); }
+  else { itemsBuf[i][f]=parseFloat(v)||0; renderItemRows(); }
+}
+function collectItems(){
+  return itemsBuf.filter(r=>r.urunId&&r.miktar>0).map(r=>{const u=urun(r.urunId);return {urunId:r.urunId,ad:u.ad,miktar:r.miktar,fiyat:r.fiyat,birim:u.birim};});
+}
+
+/* ---- SATIŞ ---- */
+function formSatis(){
+  itemsMode='satis'; itemsBuf=[{urunId:'',miktar:1,fiyat:0}];
+  openModal('Yeni satış',`<div class="form-grid">
+    ${DB.musteriler.length?`<div class="field"><label>Müşteri</label><select id="s_mus">${DB.musteriler.map(c=>`<option value="${c.id}">${esc(c.unvan)}</option>`).join('')}</select></div>`
+      :`<div class="field full"><span class="hint">Önce müşteri ekleyin.</span></div>`}
+    ${field('s_tarih','Tarih','date',todayISO())}
+    <div class="field full"><label>Ürünler</label>${itemsEditorHTML()}</div>
+    ${field('s_odeme','Ödeme','select','pesin',['pesin','veresiye','kismi'])}
+    ${field('s_odenen','Ödenen tutar (kısmi ise) ₺','number','')}
+    ${field('s_teslim','Teslimat','select','teslim edildi',['teslim edildi','bekliyor'])}
+  </div>`,()=>{
+    const items=collectItems();
+    if(!DB.musteriler.length)return toast('Önce müşteri ekleyin');
+    if(!items.length)return toast('En az bir ürün seçin');
+    const toplam=items.reduce((s,k)=>s+k.miktar*k.fiyat,0);
+    const tip=val('s_odeme');
+    const odenen= tip==='pesin'?toplam : tip==='veresiye'?0 : numv('s_odenen');
+    const cId=val('s_mus'), m=musteri(cId), id=uid('s'), tarih=new Date(val('s_tarih')||todayISO()).toISOString();
+    DB.satislar.push({id,tarih,musteriId:cId,musteri:m.unvan,kalemler:items,toplam,odemeTipi:tip,odenen,teslimat:val('s_teslim')});
+    items.forEach(k=>{const u=urun(k.urunId);u.stok=Math.max(0,u.stok-k.miktar);DB.stokHar.push({id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'cikis',miktar:k.miktar,aciklama:'Satış · '+m.unvan,ref:id});});
+    if(toplam-odenen>0.5)DB.cariHar.push({id:uid('cr'),tarih,musteriId:cId,tip:'borc',tutar:toplam-odenen,aciklama:'Satış (veresiye)',ref:id});
+    Store.save();closeModal();toast('Satış kaydedildi · stok güncellendi');go('satis');
+  },'Satışı kaydet',true);
+}
+function delSatis(id){
+  if(!confirm('Bu satış silinsin mi? Stok ve cari geri alınacak.'))return;
+  const s=DB.satislar.find(x=>x.id===id); if(!s)return;
+  s.kalemler.forEach(k=>{const u=urun(k.urunId);if(u)u.stok+=k.miktar;});
+  DB.stokHar=DB.stokHar.filter(h=>h.ref!==id);
+  DB.cariHar=DB.cariHar.filter(h=>h.ref!==id);
+  DB.satislar=DB.satislar.filter(x=>x.id!==id);
+  Store.save();toast('Satış silindi');viewSatis();
+}
+
+/* ---- ALIM ---- */
+function formAlim(){
+  itemsMode='alim'; itemsBuf=[{urunId:'',miktar:1,fiyat:0}];
+  openModal('Yeni alım',`<div class="form-grid">
+    <div class="field"><label>Tedarikçi</label><select id="a_ted">${DB.tedarikciler.map(t=>`<option value="${t.id}">${esc(t.ad)}</option>`).join('')}</select></div>
+    ${field('a_tarih','Tarih','date',todayISO())}
+    <div class="field full"><label>Gelen ürünler</label>${itemsEditorHTML()}</div>
+    ${field('a_odeme','Ödeme durumu','select','ödendi',['ödendi','bekliyor'])}
+  </div>`,()=>{
+    const items=collectItems();
+    if(!items.length)return toast('En az bir ürün seçin');
+    const toplam=items.reduce((s,k)=>s+k.miktar*k.fiyat,0);
+    const tId=val('a_ted'),td=DB.tedarikciler.find(t=>t.id===tId),id=uid('a'),tarih=new Date(val('a_tarih')||todayISO()).toISOString();
+    DB.alimlar.push({id,tarih,tedarikciId:tId,tedarikci:td.ad,kalemler:items,toplam,odeme:val('a_odeme')});
+    items.forEach(k=>{const u=urun(k.urunId);u.stok+=k.miktar;u.alis=k.fiyat;DB.stokHar.push({id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'giris',miktar:k.miktar,aciklama:'Alım · '+td.ad,ref:id});});
+    Store.save();closeModal();toast('Alım kaydedildi · stok güncellendi');go('alim');
+  },'Alımı kaydet',true);
+}
+function delAlim(id){
+  if(!confirm('Bu alım silinsin mi? Stok geri alınacak.'))return;
+  const a=DB.alimlar.find(x=>x.id===id); if(!a)return;
+  a.kalemler.forEach(k=>{const u=urun(k.urunId);if(u)u.stok=Math.max(0,u.stok-k.miktar);});
+  DB.stokHar=DB.stokHar.filter(h=>h.ref!==id);
+  DB.alimlar=DB.alimlar.filter(x=>x.id!==id);
+  Store.save();toast('Alım silindi');viewAlim();
+}
+
+/* ---- TAHSİLAT ---- */
+function formTahsilat(cId){
+  if(!DB.musteriler.length)return toast('Önce müşteri ekleyin');
+  openModal('Tahsilat gir',`<div class="form-grid">
+    <div class="field"><label>Müşteri</label><select id="p_mus">${DB.musteriler.map(c=>`<option value="${c.id}"${c.id===cId?' selected':''}>${esc(c.unvan)}</option>`).join('')}</select></div>
+    ${field('p_tarih','Tarih','date',todayISO())}
+    ${field('p_tutar','Tahsilat tutarı (₺)','number','')}
+    ${field('p_acik','Açıklama','text','Nakit tahsilat').replace('class="field"','class="field full"')}
+  </div>`,()=>{
+    const t=numv('p_tutar'); if(t<=0)return toast('Tutar girin');
+    DB.cariHar.push({id:uid('cr'),tarih:new Date(val('p_tarih')||todayISO()).toISOString(),musteriId:val('p_mus'),tip:'tahsilat',tutar:t,aciklama:val('p_acik')||'Tahsilat'});
+    Store.save();closeModal();toast('Tahsilat kaydedildi');viewCari();
+  },'Tahsilatı kaydet');
+}
+
+/* ---- GİDER ---- */
+function formGider(){
+  openModal('Yeni gider',`<div class="form-grid">
+    ${field('g_tarih','Tarih','date',todayISO())}
+    ${field('g_kat','Kategori','select','yakıt',['yakıt','maaş','kira','elektrik','araç bakım','fatura','diğer'])}
+    ${field('g_tutar','Tutar (₺)','number','')}
+    ${field('g_odeme','Ödeme durumu','select','ödendi',['ödendi','bekliyor'])}
+    ${field('g_acik','Açıklama','text','').replace('class="field"','class="field full"')}
+    <div class="field full"><label>İlgili personel (maaş ise)</label><select id="g_pers"><option value="">— Yok —</option>${DB.personel.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select></div>
+  </div>`,()=>{
+    if(numv('g_tutar')<=0)return toast('Tutar girin');
+    DB.giderler.push({id:uid('g'),tarih:new Date(val('g_tarih')||todayISO()).toISOString(),kategori:val('g_kat'),tutar:numv('g_tutar'),aciklama:val('g_acik')||val('g_kat'),odeme:val('g_odeme'),personelId:val('g_pers')});
+    Store.save();closeModal();toast('Gider kaydedildi');viewGider();
+  });
+}
+
+/* ---- PERSONEL ---- */
+function formPersonel(id){
+  const p=id?DB.personel.find(x=>x.id===id):{};
+  openModal(id?'Personeli düzenle':'Personel ekle',`<div class="form-grid">
+    ${field('pr_ad','Ad soyad','text',p.ad||'').replace('class="field"','class="field full"')}
+    ${field('pr_tel','Telefon','text',p.telefon||'')}
+    ${field('pr_poz','Pozisyon','select',p.pozisyon||'şoför',['şoför','depo','satış','diğer'])}
+    ${field('pr_giris','İşe giriş','date',p.giris||todayISO())}
+    ${field('pr_maas','Maaş (₺)','number',p.maas||'')}
+    ${field('pr_durum','Durum','select',p.durum||'aktif',['aktif','ayrıldı'])}
+    ${field('pr_cikis','Çıkış tarihi (ayrıldıysa)','date',p.cikis||'')}
+    ${field('pr_not','Not','textarea',p.not||'')}
+  </div>`,()=>{
+    if(!val('pr_ad'))return toast('Ad gerekli');
+    const o={ad:val('pr_ad'),telefon:val('pr_tel'),pozisyon:val('pr_poz'),giris:val('pr_giris'),maas:numv('pr_maas'),durum:val('pr_durum'),cikis:val('pr_cikis'),not:val('pr_not')};
+    if(id)Object.assign(DB.personel.find(x=>x.id===id),o); else DB.personel.push({id:uid('pr'),...o});
+    Store.save();closeModal();toast(id?'Güncellendi':'Personel eklendi');viewPersonel();
+  });
+}
+
+/* ---- GENERIC DELETE ---- */
+function delItem(tbl,id,ad){
+  if(!confirm(`"${ad}" silinsin mi?`))return;
+  DB[tbl]=DB[tbl].filter(x=>x.id!==id);
+  Store.save();toast('Silindi');render();
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+Store.load();
+$('#today').textContent=new Date().toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long'});
+buildNav();
+render();
+</script>
+</body>
+</html>
