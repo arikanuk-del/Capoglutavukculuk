@@ -248,6 +248,28 @@ th.r,td.r{text-align:right}
 .backdrop{display:none}
 kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;font-family:inherit;color:var(--ink-2)}
 
+/* ---------- Auth / boot ---------- */
+.boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--frost);color:var(--muted);font-weight:600;z-index:400}
+.boot-mark{font-size:34px}
+.spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--petrol);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(1100px 560px at 50% -10%,#E4F0F0,var(--frost));z-index:400}
+.login-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 26px;width:100%;max-width:380px;box-shadow:0 12px 40px rgba(16,38,43,.12)}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.login-brand .mark{width:44px;height:44px;border-radius:12px;background:linear-gradient(150deg,var(--petrol),#0B838C);display:grid;place-items:center;color:#fff;flex:none}
+.login-brand .mark svg{width:24px;height:24px}
+.login-brand b{font-size:16px;font-weight:800;display:block;letter-spacing:-.2px}
+.login-brand span{font-size:12px;color:var(--muted);font-weight:600}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px}
+.login-field input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:var(--surface);color:var(--ink)}
+.login-field input:focus{outline:none;border-color:var(--petrol);box-shadow:0 0 0 3px var(--petrol-l)}
+.login-err{color:var(--alert);font-size:12.5px;font-weight:600;margin-bottom:12px;min-height:16px}
+.user-row{display:flex;align-items:center;gap:10px}
+.user-ic{width:32px;height:32px;border-radius:8px;background:var(--petrol-l);display:grid;place-items:center;font-size:15px;flex:none}
+.user-meta b{font-size:12.5px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px}
+.user-meta span{font-size:11px;color:var(--muted);font-weight:600}
+
 /* ---------- Responsive ---------- */
 @media(max-width:900px){
   .app{grid-template-columns:1fr}
@@ -268,16 +290,31 @@ kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-wei
 </style>
 </head>
 <body>
-<div class="app">
+<div id="bootScreen" class="boot"><div class="boot-mark">❄️</div><div class="spinner"></div><div>Yükleniyor…</div></div>
+
+<div id="loginScreen" class="login" style="display:none">
+  <form id="loginForm" class="login-card">
+    <div class="login-brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19"/></svg></div>
+      <div><b>Çapoğlu Tavukçuluk</b><span>Dağıtım Paneli</span></div>
+    </div>
+    <div class="login-field"><label>E-posta</label><input id="lg_email" type="email" autocomplete="username" required></div>
+    <div class="login-field"><label>Şifre</label><input id="lg_pass" type="password" autocomplete="current-password" required></div>
+    <div id="lg_err" class="login-err"></div>
+    <button id="lg_btn" type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px 15px">Giriş yap</button>
+  </form>
+</div>
+
+<div class="app" id="app" style="display:none">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20M5 5l14 14M19 5L5 19"/></svg></div>
-      <div><b>Soğuk Zincir</b><span>Dağıtım Paneli</span></div>
+      <div><b>Çapoğlu Tavukçuluk</b><span>Dağıtım Paneli</span></div>
     </div>
     <nav id="nav"></nav>
     <div class="side-foot">
-      <div class="mode-chip"><span class="dot"></span> Yerel demo modu</div>
-      <small>Veriler bu cihazda tutuluyor. Sonraki adım: Supabase ile buluta taşıma.</small>
+      <div class="user-row"><div class="user-ic">👤</div><div class="user-meta"><b id="userEmail">—</b><span>Çapoğlu Tavukçuluk</span></div></div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="logout()">Çıkış yap</button>
     </div>
   </aside>
   <div class="backdrop" id="backdrop" onclick="toggleNav(false)"></div>
@@ -306,14 +343,43 @@ kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-wei
   <div class="scan-sheet" id="scanSheet"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============================================================
-   DATA LAYER  — localStorage now; structured so a Supabase
-   adapter can replace Store internals without touching the UI.
-   Tables mirror the planned Supabase schema.
+   DATA LAYER — Supabase (bulut). DB, bellek içi aynadır;
+   arayüz senkron okumaya devam eder, yazmalar buluta gider.
 ============================================================ */
-const KEY='donmus_panel_v1';
-let DB=null;
+// --- Supabase bağlantısı ---
+const SUPABASE_URL='https://nzirovbamknwgszymbrd.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_4xNFjZezXhG3kVmi1tMDVA_RdPcdJlg'; // Project Settings → API Keys → anon / publishable
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const T={urunler:'urunler',musteriler:'musteriler',tedarikciler:'tedarikciler',satislar:'satislar',alimlar:'alimlar',stokHar:'stok_hareketleri',cariHar:'cari_hareketler',giderler:'giderler',personel:'personel'};
+
+const DB={urunler:[],musteriler:[],tedarikciler:[],satislar:[],alimlar:[],stokHar:[],cariHar:[],giderler:[],personel:[]};
+
+// Tüm satırları sayfalayarak çek (1000 satır sınırına karşı: gelen satır kadar ilerle, boşta dur)
+async function fetchAll(table){
+  const out=[]; const size=1000; let from=0;
+  while(true){
+    const {data,error}=await sb.from(table).select('*').range(from,from+size-1);
+    if(error)throw error;
+    out.push(...data);
+    if(data.length<size)break;
+    from+=data.length;
+  }
+  return out;
+}
+async function loadAll(){
+  const keys=Object.keys(T);
+  const res=await Promise.all(keys.map(k=>fetchAll(T[k])));
+  keys.forEach((k,i)=>{DB[k]=res[i];});
+}
+// Yazmalar (iyimser: bellek zaten güncellendi; hata olursa uyarır)
+function put(key,row){ if(!row)return; sb.from(T[key]).upsert(row).then(({error})=>{if(error)writeErr(error);}); }
+function putMany(key,rows){ if(!rows||!rows.length)return; sb.from(T[key]).upsert(rows).then(({error})=>{if(error)writeErr(error);}); }
+function del(key,id){ sb.from(T[key]).delete().eq('id',id).then(({error})=>{if(error)writeErr(error);}); }
+function delByRef(key,ref){ sb.from(T[key]).delete().eq('ref',ref).then(({error})=>{if(error)writeErr(error);}); }
+function writeErr(e){ console.error('Supabase yazma hatası:',e); toast('Kaydedilemedi — bağlantıyı kontrol edin'); }
 
 const uid=p=>p+Math.random().toString(36).slice(2,8);
 const daysAgo=n=>{const d=new Date();d.setDate(d.getDate()-n);d.setHours(10,0,0,0);return d.toISOString();};
@@ -414,13 +480,46 @@ function seed(){
   return {urunler,musteriler,tedarikciler,satislar,alimlar,stokHar,cariHar,giderler,personel};
 }
 
-const Store={
-  load(){ const r=localStorage.getItem(KEY); DB = r?JSON.parse(r):seed(); if(!r)Store.save();
-    if(DB&&!DB._kdv1){ (DB.urunler||[]).forEach(u=>{ if(u.kdv===10)u.kdv=1; }); DB._kdv1=true; Store.save(); } },
-  save(){ localStorage.setItem(KEY,JSON.stringify(DB)); },
-  reset(){ DB=seed(); Store.save(); },
-  wipe(){ DB={urunler:DB.urunler,musteriler:[],tedarikciler:DB.tedarikciler,satislar:[],alimlar:[],stokHar:[],cariHar:[],giderler:[],personel:[]}; Store.save(); }
-};
+/* ============================================================
+   GİRİŞ (Supabase Auth) & AÇILIŞ
+============================================================ */
+async function initAuth(){
+  wireLogin();
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session) await enterApp(session); else showLogin();
+  }catch(e){ console.error(e); showLogin(); }
+}
+function showLogin(){
+  document.getElementById('bootScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+async function enterApp(session){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('bootScreen').style.display='flex';
+  try{ await loadAll(); }
+  catch(e){ console.error(e); document.getElementById('bootScreen').innerHTML='<div style="text-align:center;color:var(--alert);font-weight:700;padding:0 24px">Veriler yüklenemedi.<br>Bağlantıyı kontrol edip sayfayı yenileyin.</div>'; return; }
+  const ue=document.getElementById('userEmail'); if(ue)ue.textContent=session.user?.email||'';
+  document.getElementById('bootScreen').style.display='none';
+  document.getElementById('app').style.display='grid';
+  buildNav(); render();
+}
+function wireLogin(){
+  const f=document.getElementById('loginForm'); if(!f||f._wired)return; f._wired=true;
+  f.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const email=document.getElementById('lg_email').value.trim();
+    const pass=document.getElementById('lg_pass').value;
+    const err=document.getElementById('lg_err'); err.textContent='';
+    const btn=document.getElementById('lg_btn'); btn.disabled=true; btn.textContent='Giriş yapılıyor…';
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    btn.disabled=false; btn.textContent='Giriş yap';
+    if(error){ err.textContent='Giriş başarısız — e-posta veya şifre hatalı.'; return; }
+    await enterApp(data.session);
+  });
+}
+async function logout(){ try{await sb.auth.signOut();}catch(_){} location.reload(); }
 
 /* ============================================================
    HELPERS
@@ -833,7 +932,7 @@ function viewPersonel(){
   ${list.length?`<div class="table-wrap"><table>
     <thead><tr><th>Ad soyad</th><th>Pozisyon</th><th>Telefon</th><th>Giriş</th><th class="r">Maaş</th><th>Durum</th><th></th></tr></thead>
     <tbody>${list.map(p=>`<tr>
-      <td class="t-name">${esc(p.ad)}${p.not?`<div class="t-sub">${esc(p.not)}</div>`:''}</td>
+      <td class="t-name">${esc(p.ad)}${p.notlar?`<div class="t-sub">${esc(p.notlar)}</div>`:''}</td>
       <td><span class="badge b-neu">${p.pozisyon}</span></td>
       <td class="num t-sub">${esc(p.telefon)}</td>
       <td class="num">${p.giris?DATE(p.giris):'—'}${p.cikis?`<div class="t-sub">Çıkış ${DATE(p.cikis)}</div>`:''}</td>
@@ -937,8 +1036,8 @@ function formUrun(id){
   </div>`,()=>{
     if(!val('u_ad'))return toast('Ürün adı gerekli');
     const o={ad:val('u_ad'),kategori:val('u_kat'),birim:val('u_birim'),alis:numv('u_alis'),satis:numv('u_satis'),stok:numv('u_stok'),kritik:numv('u_kritik'),kdv:numv('u_kdv'),barkod:val('u_barkod')};
-    if(id)Object.assign(urun(id),o); else DB.urunler.push({id:uid('p'),...o});
-    Store.save();closeModal();toast(id?'Ürün güncellendi':'Ürün eklendi');viewUrunler();
+    let rec; if(id){rec=urun(id);Object.assign(rec,o);} else {rec={id:uid('p'),...o};DB.urunler.push(rec);}
+    put('urunler',rec);closeModal();toast(id?'Ürün güncellendi':'Ürün eklendi');viewUrunler();
   });
 }
 
@@ -958,8 +1057,8 @@ function formMusteri(id){
   </div>`,()=>{
     if(!val('c_unvan'))return toast('Ünvan gerekli');
     const o={unvan:val('c_unvan'),tip:val('c_tip'),yetkili:val('c_yetkili'),telefon:val('c_tel'),adres:val('c_adres'),vd:val('c_vd'),vno:val('c_vno'),acilis:numv('c_acilis')};
-    if(id)Object.assign(musteri(id),o); else DB.musteriler.push({id:uid('c'),...o});
-    Store.save();closeModal();toast(id?'Müşteri güncellendi':'Müşteri eklendi');viewMusteriler();
+    let rec; if(id){rec=musteri(id);Object.assign(rec,o);} else {rec={id:uid('c'),...o};DB.musteriler.push(rec);}
+    put('musteriler',rec);closeModal();toast(id?'Müşteri güncellendi':'Müşteri eklendi');viewMusteriler();
   });
 }
 
@@ -972,8 +1071,8 @@ function formTedarikci(){
     ${field('td_not','Not','textarea','')}
   </div>`,()=>{
     if(!val('td_ad'))return toast('Ad gerekli');
-    DB.tedarikciler.push({id:uid('t'),ad:val('td_ad'),telefon:val('td_tel'),adres:val('td_adres'),not:val('td_not')});
-    Store.save();closeModal();toast('Tedarikçi eklendi');viewAlim();
+    const rec={id:uid('t'),ad:val('td_ad'),telefon:val('td_tel'),adres:val('td_adres'),notlar:val('td_not')};
+    DB.tedarikciler.push(rec);put('tedarikciler',rec);closeModal();toast('Tedarikçi eklendi');viewAlim();
   });
 }
 
@@ -990,8 +1089,8 @@ function formStok(id){
     if(m<=0)return toast('Miktar girin');
     u.stok += tip==='giris'? m : -m;
     if(u.stok<0)u.stok=0;
-    DB.stokHar.push({id:uid('h'),tarih:new Date().toISOString(),urunId:id,ad:u.ad,tip,miktar:m,aciklama:val('h_acik')||({giris:'Manuel giriş',cikis:'Manuel çıkış',fire:'Fire / zayi'}[tip])});
-    Store.save();closeModal();toast('Stok güncellendi');viewStok();
+    const h={id:uid('h'),tarih:new Date().toISOString(),urunId:id,ad:u.ad,tip,miktar:m,aciklama:val('h_acik')||({giris:'Manuel giriş',cikis:'Manuel çıkış',fire:'Fire / zayi'}[tip])};
+    DB.stokHar.push(h);put('urunler',u);put('stokHar',h);closeModal();toast('Stok güncellendi');viewStok();
   });
 }
 
@@ -1045,20 +1144,25 @@ function formSatis(){
     const tip=val('s_odeme');
     const odenen= tip==='pesin'?toplam : tip==='veresiye'?0 : numv('s_odenen');
     const cId=val('s_mus'), m=musteri(cId), id=uid('s'), tarih=new Date(val('s_tarih')||todayISO()).toISOString();
-    DB.satislar.push({id,tarih,musteriId:cId,musteri:m.unvan,kalemler:items,toplam,odemeTipi:tip,odenen,teslimat:val('s_teslim')});
-    items.forEach(k=>{const u=urun(k.urunId);u.stok=Math.max(0,u.stok-k.miktar);DB.stokHar.push({id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'cikis',miktar:k.miktar,aciklama:'Satış · '+m.unvan,ref:id});});
-    if(toplam-odenen>0.5)DB.cariHar.push({id:uid('cr'),tarih,musteriId:cId,tip:'borc',tutar:toplam-odenen,aciklama:'Satış (veresiye)',ref:id});
-    Store.save();closeModal();toast('Satış kaydedildi · stok güncellendi');go('satis');
+    const sale={id,tarih,musteriId:cId,musteri:m.unvan,kalemler:items,toplam,odemeTipi:tip,odenen,teslimat:val('s_teslim')};
+    DB.satislar.push(sale);
+    const har=[],chg=[];
+    items.forEach(k=>{const u=urun(k.urunId);u.stok=Math.max(0,u.stok-k.miktar);chg.push(u);const h={id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'cikis',miktar:k.miktar,aciklama:'Satış · '+m.unvan,ref:id};DB.stokHar.push(h);har.push(h);});
+    let cari=null; if(toplam-odenen>0.5){cari={id:uid('cr'),tarih,musteriId:cId,tip:'borc',tutar:toplam-odenen,aciklama:'Satış (veresiye)',ref:id};DB.cariHar.push(cari);}
+    put('satislar',sale);putMany('stokHar',har);putMany('urunler',chg);if(cari)put('cariHar',cari);
+    closeModal();toast('Satış kaydedildi · stok güncellendi');go('satis');
   },'Satışı kaydet',true);
 }
 function delSatis(id){
   if(!confirm('Bu satış silinsin mi? Stok ve cari geri alınacak.'))return;
   const s=DB.satislar.find(x=>x.id===id); if(!s)return;
-  s.kalemler.forEach(k=>{const u=urun(k.urunId);if(u)u.stok+=k.miktar;});
+  const chg=[];
+  s.kalemler.forEach(k=>{const u=urun(k.urunId);if(u){u.stok+=k.miktar;chg.push(u);}});
   DB.stokHar=DB.stokHar.filter(h=>h.ref!==id);
   DB.cariHar=DB.cariHar.filter(h=>h.ref!==id);
   DB.satislar=DB.satislar.filter(x=>x.id!==id);
-  Store.save();toast('Satış silindi');viewSatis();
+  putMany('urunler',chg);delByRef('stokHar',id);delByRef('cariHar',id);del('satislar',id);
+  toast('Satış silindi');viewSatis();
 }
 
 /* ---- ALIM ---- */
@@ -1074,18 +1178,23 @@ function formAlim(){
     if(!items.length)return toast('En az bir ürün seçin');
     const toplam=items.reduce((s,k)=>s+k.miktar*k.fiyat,0);
     const tId=val('a_ted'),td=DB.tedarikciler.find(t=>t.id===tId),id=uid('a'),tarih=new Date(val('a_tarih')||todayISO()).toISOString();
-    DB.alimlar.push({id,tarih,tedarikciId:tId,tedarikci:td.ad,kalemler:items,toplam,odeme:val('a_odeme')});
-    items.forEach(k=>{const u=urun(k.urunId);u.stok+=k.miktar;u.alis=k.fiyat;DB.stokHar.push({id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'giris',miktar:k.miktar,aciklama:'Alım · '+td.ad,ref:id});});
-    Store.save();closeModal();toast('Alım kaydedildi · stok güncellendi');go('alim');
+    const buy={id,tarih,tedarikciId:tId,tedarikci:td.ad,kalemler:items,toplam,odeme:val('a_odeme')};
+    DB.alimlar.push(buy);
+    const har=[],chg=[];
+    items.forEach(k=>{const u=urun(k.urunId);u.stok+=k.miktar;u.alis=k.fiyat;chg.push(u);const h={id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'giris',miktar:k.miktar,aciklama:'Alım · '+td.ad,ref:id};DB.stokHar.push(h);har.push(h);});
+    put('alimlar',buy);putMany('stokHar',har);putMany('urunler',chg);
+    closeModal();toast('Alım kaydedildi · stok güncellendi');go('alim');
   },'Alımı kaydet',true);
 }
 function delAlim(id){
   if(!confirm('Bu alım silinsin mi? Stok geri alınacak.'))return;
   const a=DB.alimlar.find(x=>x.id===id); if(!a)return;
-  a.kalemler.forEach(k=>{const u=urun(k.urunId);if(u)u.stok=Math.max(0,u.stok-k.miktar);});
+  const chg=[];
+  a.kalemler.forEach(k=>{const u=urun(k.urunId);if(u){u.stok=Math.max(0,u.stok-k.miktar);chg.push(u);}});
   DB.stokHar=DB.stokHar.filter(h=>h.ref!==id);
   DB.alimlar=DB.alimlar.filter(x=>x.id!==id);
-  Store.save();toast('Alım silindi');viewAlim();
+  putMany('urunler',chg);delByRef('stokHar',id);del('alimlar',id);
+  toast('Alım silindi');viewAlim();
 }
 
 /* ---- TAHSİLAT ---- */
@@ -1098,8 +1207,8 @@ function formTahsilat(cId){
     ${field('p_acik','Açıklama','text','Nakit tahsilat').replace('class="field"','class="field full"')}
   </div>`,()=>{
     const t=numv('p_tutar'); if(t<=0)return toast('Tutar girin');
-    DB.cariHar.push({id:uid('cr'),tarih:new Date(val('p_tarih')||todayISO()).toISOString(),musteriId:val('p_mus'),tip:'tahsilat',tutar:t,aciklama:val('p_acik')||'Tahsilat'});
-    Store.save();closeModal();toast('Tahsilat kaydedildi');viewCari();
+    const rec={id:uid('cr'),tarih:new Date(val('p_tarih')||todayISO()).toISOString(),musteriId:val('p_mus'),tip:'tahsilat',tutar:t,aciklama:val('p_acik')||'Tahsilat'};
+    DB.cariHar.push(rec);put('cariHar',rec);closeModal();toast('Tahsilat kaydedildi');viewCari();
   },'Tahsilatı kaydet');
 }
 
@@ -1114,8 +1223,8 @@ function formGider(){
     <div class="field full"><label>İlgili personel (maaş ise)</label><select id="g_pers"><option value="">— Yok —</option>${DB.personel.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select></div>
   </div>`,()=>{
     if(numv('g_tutar')<=0)return toast('Tutar girin');
-    DB.giderler.push({id:uid('g'),tarih:new Date(val('g_tarih')||todayISO()).toISOString(),kategori:val('g_kat'),tutar:numv('g_tutar'),aciklama:val('g_acik')||val('g_kat'),odeme:val('g_odeme'),personelId:val('g_pers')});
-    Store.save();closeModal();toast('Gider kaydedildi');viewGider();
+    const rec={id:uid('g'),tarih:new Date(val('g_tarih')||todayISO()).toISOString(),kategori:val('g_kat'),tutar:numv('g_tutar'),aciklama:val('g_acik')||val('g_kat'),odeme:val('g_odeme'),personelId:val('g_pers')};
+    DB.giderler.push(rec);put('giderler',rec);closeModal();toast('Gider kaydedildi');viewGider();
   });
 }
 
@@ -1130,12 +1239,12 @@ function formPersonel(id){
     ${field('pr_maas','Maaş (₺)','number',p.maas||'')}
     ${field('pr_durum','Durum','select',p.durum||'aktif',['aktif','ayrıldı'])}
     ${field('pr_cikis','Çıkış tarihi (ayrıldıysa)','date',p.cikis||'')}
-    ${field('pr_not','Not','textarea',p.not||'')}
+    ${field('pr_not','Not','textarea',p.notlar||'')}
   </div>`,()=>{
     if(!val('pr_ad'))return toast('Ad gerekli');
-    const o={ad:val('pr_ad'),telefon:val('pr_tel'),pozisyon:val('pr_poz'),giris:val('pr_giris'),maas:numv('pr_maas'),durum:val('pr_durum'),cikis:val('pr_cikis'),not:val('pr_not')};
-    if(id)Object.assign(DB.personel.find(x=>x.id===id),o); else DB.personel.push({id:uid('pr'),...o});
-    Store.save();closeModal();toast(id?'Güncellendi':'Personel eklendi');viewPersonel();
+    const o={ad:val('pr_ad'),telefon:val('pr_tel'),pozisyon:val('pr_poz'),giris:val('pr_giris'),maas:numv('pr_maas'),durum:val('pr_durum'),cikis:val('pr_cikis'),notlar:val('pr_not')};
+    let rec; if(id){rec=DB.personel.find(x=>x.id===id);Object.assign(rec,o);} else {rec={id:uid('pr'),...o};DB.personel.push(rec);}
+    put('personel',rec);closeModal();toast(id?'Güncellendi':'Personel eklendi');viewPersonel();
   });
 }
 
@@ -1143,7 +1252,7 @@ function formPersonel(id){
 function delItem(tbl,id,ad){
   if(!confirm(`"${ad}" silinsin mi?`))return;
   DB[tbl]=DB[tbl].filter(x=>x.id!==id);
-  Store.save();toast('Silindi');render();
+  del(tbl,id);toast('Silindi');render();
 }
 
 /* ============================================================
@@ -1222,7 +1331,7 @@ function scanForStock(){
 }
 function assignBarcode(code,then){
   openModal('Yeni barkod',`<div class="form-grid"><div class="field full"><span class="hint">Bu barkod (<b class="mono-n">${esc(code)}</b>) henüz tanımlı değil. Hangi ürüne ait?</span></div><div class="field full"><label>Ürün</label><select id="ab_sel"><option value="">Seç...</option>${DB.urunler.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select></div></div>`,()=>{
-    const id=val('ab_sel'); if(!id)return toast('Ürün seçin'); urun(id).barkod=code; Store.save(); closeModal(); toast('Barkod eşleştirildi'); if(then)then(id);
+    const id=val('ab_sel'); if(!id)return toast('Ürün seçin'); const u=urun(id); u.barkod=code; put('urunler',u); closeModal(); toast('Barkod eşleştirildi'); if(then)then(id);
   },'Eşleştir');
 }
 function scanIntoField(fieldId){
@@ -1249,7 +1358,7 @@ function bump(d){const q=document.getElementById('ikQty');if(q)q.value=Math.max(
 function intakeAdd(){const q=parseInt((document.getElementById('ikQty')||{}).value)||1;applyIntake(pendingProduct,q);sheetResume();}
 function intakeAddNew(){const id=(document.getElementById('ikSel')||{}).value;if(!id)return toast('Ürün seçin');const u=urun(id);u.barkod=pendingCode;const q=parseInt((document.getElementById('ikQty')||{}).value)||1;applyIntake(u,q);sheetResume();}
 function intakeSkip(){sheetResume();}
-function applyIntake(u,q){u.stok+=q;DB.stokHar.push({id:uid('h'),tarih:new Date().toISOString(),urunId:u.id,ad:u.ad,tip:'giris',miktar:q,aciklama:'Hızlı mal kabul'});intakeLog.push({ad:u.ad,q,birim:u.birim});Store.save();toast(u.ad+' +'+NUM(q));}
+function applyIntake(u,q){u.stok+=q;const h={id:uid('h'),tarih:new Date().toISOString(),urunId:u.id,ad:u.ad,tip:'giris',miktar:q,aciklama:'Hızlı mal kabul'};DB.stokHar.push(h);intakeLog.push({ad:u.ad,q,birim:u.birim});put('urunler',u);put('stokHar',h);toast(u.ad+' +'+NUM(q));}
 function sheetResume(){document.getElementById('scanSheet').classList.remove('show');pendingProduct=null;pendingCode=null;scanActive=true;if(scanDetector)startDetectLoop();}
 function showIntakeSheetModal(code){
   const u=DB.urunler.find(x=>(x.barkod||'')===code); pendingCode=code; pendingProduct=u||null;
@@ -1272,10 +1381,8 @@ function finishIntake(){
 /* ============================================================
    INIT
 ============================================================ */
-Store.load();
 $('#today').textContent=new Date().toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long'});
-buildNav();
-render();
+initAuth();
 </script>
 </body>
 </html>
