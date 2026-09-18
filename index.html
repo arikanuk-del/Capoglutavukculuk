@@ -841,7 +841,25 @@ function viewStok(){
 /* ============================================================
    VIEW: ALIMLAR
 ============================================================ */
+let alimTab='alimlar';
 function viewAlim(){
+  const seg=`<div class="seg"><button class="${alimTab==='alimlar'?'on':''}" onclick="alimTab='alimlar';viewAlim()">Alımlar</button><button class="${alimTab==='tedarikci'?'on':''}" onclick="alimTab='tedarikci';viewAlim()">Tedarikçiler</button></div>`;
+  if(alimTab==='tedarikci'){
+    const ts=[...DB.tedarikciler].sort((a,b)=>a.ad.localeCompare(b.ad,'tr'));
+    const body=ts.length?`<div class="table-wrap"><table>
+      <thead><tr><th>Tedarikçi</th><th>Telefon</th><th>Adres</th><th></th></tr></thead>
+      <tbody>${ts.map(t=>`<tr>
+        <td class="t-name">${esc(t.ad)}${t.notlar?`<div class="t-sub">${esc(t.notlar)}</div>`:''}</td>
+        <td class="num t-sub">${esc(t.telefon||'')}</td>
+        <td class="t-sub">${esc(t.adres||'')}</td>
+        <td><div class="row-act">
+          <button class="icon-btn" title="Düzenle" onclick="formTedarikci('${t.id}')">${svg(I.edit,15)}</button>
+          <button class="icon-btn" title="Sil" onclick="delItem('tedarikciler','${t.id}','${esc(t.ad)}')">${svg(I.trash,15)}</button>
+        </div></td></tr>`).join('')}</tbody></table></div>`
+      :`<div class="panel"><div class="empty">${svg(I.alim,34)}<b>Tedarikçi yok</b><p>İlk tedarikçinizi ekleyin.</p><button class="btn btn-primary" onclick="formTedarikci()">${svg(I.plus,16)}Tedarikçi ekle</button></div></div>`;
+    $('#view').innerHTML=`<div class="toolbar">${seg}<div class="spacer" style="flex:1"></div><button class="btn btn-ghost btn-sm" onclick="formTedarikci()">${svg(I.plus,15)}Tedarikçi ekle</button></div>${body}`;
+    return;
+  }
   const list=[...DB.alimlar].sort((a,b)=>new Date(b.tarih)-new Date(a.tarih));
   const box=list.length?`<div class="table-wrap"><table>
     <thead><tr><th>Tarih</th><th>Tedarikçi</th><th>Ürünler</th><th class="r">Tutar</th><th>Ödeme</th><th></th></tr></thead>
@@ -851,10 +869,13 @@ function viewAlim(){
       <td class="t-sub">${a.kalemler.map(k=>esc(k.ad)+' ×'+NUM(k.miktar)).join(', ')}</td>
       <td class="r num"><b>${TL(a.toplam)}</b></td>
       <td>${badgeGiderOdeme(a.odeme)}</td>
-      <td><div class="row-act"><button class="icon-btn" title="Sil" onclick="delAlim('${a.id}')">${svg(I.trash,15)}</button></div></td>
+      <td><div class="row-act">
+        <button class="icon-btn" title="Düzenle" onclick="formAlim('${a.id}')">${svg(I.edit,15)}</button>
+        <button class="icon-btn" title="Sil" onclick="delAlim('${a.id}')">${svg(I.trash,15)}</button>
+      </div></td>
     </tr>`).join('')}</tbody></table></div>`
     :`<div class="panel"><div class="empty">${svg(I.alim,34)}<b>Henüz alım kaydı yok</b><p>Tedarikçiden gelen malı kaydedin; stok otomatik güncellenir.</p><button class="btn btn-primary" onclick="formAlim()">${svg(I.plus,16)}Yeni alım</button></div></div>`;
-  $('#view').innerHTML=`<div class="toolbar"><div style="font-size:13px;color:var(--muted);font-weight:600">Toplam ${list.length} alım · tedarikçiler <b style="color:var(--ink-2)">${DB.tedarikciler.length}</b></div><div class="spacer" style="flex:1"></div><button class="btn btn-ghost btn-sm" onclick="formTedarikci()">${svg(I.plus,15)}Tedarikçi ekle</button></div>${box}`;
+  $('#view').innerHTML=`<div class="toolbar">${seg}<div style="font-size:12.5px;color:var(--muted);font-weight:600">Toplam ${list.length} alım</div><div class="spacer" style="flex:1"></div></div>${box}`;
 }
 
 /* ============================================================
@@ -1165,16 +1186,18 @@ function formMusteri(id){
 }
 
 /* ---- TEDARİKÇİ ---- */
-function formTedarikci(){
-  openModal('Yeni tedarikçi',`<div class="form-grid">
-    ${field('td_ad','Tedarikçi adı','text','').replace('class="field"','class="field full"')}
-    ${field('td_tel','Telefon','text','')}
-    ${field('td_adres','Adres','text','')}
-    ${field('td_not','Not','textarea','')}
+function formTedarikci(id){
+  const t=id?DB.tedarikciler.find(x=>x.id===id):{};
+  openModal(id?'Tedarikçiyi düzenle':'Yeni tedarikçi',`<div class="form-grid">
+    ${field('td_ad','Tedarikçi adı','text',t.ad||'').replace('class="field"','class="field full"')}
+    ${field('td_tel','Telefon','text',t.telefon||'')}
+    ${field('td_adres','Adres','text',t.adres||'')}
+    ${field('td_not','Not','textarea',t.notlar||'')}
   </div>`,()=>{
     if(!val('td_ad'))return toast('Ad gerekli');
-    const rec={id:uid('t'),ad:val('td_ad'),telefon:val('td_tel'),adres:val('td_adres'),notlar:val('td_not')};
-    DB.tedarikciler.push(rec);put('tedarikciler',rec);closeModal();toast('Tedarikçi eklendi');viewAlim();
+    const o={ad:val('td_ad'),telefon:val('td_tel'),adres:val('td_adres'),notlar:val('td_not')};
+    let rec; if(id){rec=DB.tedarikciler.find(x=>x.id===id);Object.assign(rec,o);} else {rec={id:uid('t'),...o};DB.tedarikciler.push(rec);}
+    put('tedarikciler',rec);closeModal();toast(id?'Tedarikçi güncellendi':'Tedarikçi eklendi');viewAlim();
   });
 }
 
@@ -1274,25 +1297,34 @@ function delSatis(id){
 }
 
 /* ---- ALIM ---- */
-function formAlim(){
-  itemsMode='alim'; itemsBuf=[{urunId:'',miktar:1,fiyat:0}];
-  openModal('Yeni alım',`<div class="form-grid">
-    <div class="field"><label>Tedarikçi</label><select id="a_ted">${DB.tedarikciler.map(t=>`<option value="${t.id}">${esc(t.ad)}</option>`).join('')}</select></div>
-    ${field('a_tarih','Tarih','date',todayISO())}
+function formAlim(id){
+  itemsMode='alim';
+  const ed=id?DB.alimlar.find(x=>x.id===id):null;
+  itemsBuf = ed ? ed.kalemler.map(k=>({urunId:k.urunId,miktar:k.miktar,fiyat:k.fiyat})) : [{urunId:'',miktar:1,fiyat:0}];
+  openModal(ed?'Alımı düzenle':'Yeni alım',`<div class="form-grid">
+    <div class="field"><label>Tedarikçi</label><select id="a_ted">${DB.tedarikciler.map(t=>`<option value="${t.id}"${ed&&ed.tedarikciId===t.id?' selected':''}>${esc(t.ad)}</option>`).join('')}</select></div>
+    ${field('a_tarih','Tarih','date', ed?new Date(ed.tarih).toISOString().slice(0,10):todayISO())}
     <div class="field full"><label>Gelen ürünler</label>${itemsEditorHTML()}</div>
-    ${field('a_odeme','Ödeme durumu','select','ödendi',['ödendi','bekliyor'])}
+    ${field('a_odeme','Ödeme durumu','select', ed?ed.odeme:'ödendi',['ödendi','bekliyor'])}
   </div>`,()=>{
     const items=collectItems();
     if(!items.length)return toast('En az bir ürün seçin');
+    const tId=val('a_ted'),td=DB.tedarikciler.find(t=>t.id===tId);
+    if(!td)return toast('Tedarikçi seçin');
     const toplam=items.reduce((s,k)=>s+k.miktar*k.fiyat,0);
-    const tId=val('a_ted'),td=DB.tedarikciler.find(t=>t.id===tId),id=uid('a'),tarih=new Date(val('a_tarih')||todayISO()).toISOString();
-    const buy={id,tarih,tedarikciId:tId,tedarikci:td.ad,kalemler:items,toplam,odeme:val('a_odeme')};
-    DB.alimlar.push(buy);
-    const har=[],chg=[];
-    items.forEach(k=>{const u=urun(k.urunId);u.stok+=k.miktar;u.alis=k.fiyat;chg.push(u);const h={id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'giris',miktar:k.miktar,aciklama:'Alım · '+td.ad,ref:id};DB.stokHar.push(h);har.push(h);});
-    put('alimlar',buy);putMany('stokHar',har);putMany('urunler',chg);
-    closeModal();toast('Alım kaydedildi · stok güncellendi');go('alim');
-  },'Alımı kaydet',true);
+    const tarih=new Date(val('a_tarih')||todayISO()).toISOString();
+    const aid=ed?id:uid('a'); const chg=[];
+    if(ed){ // eski etkiyi geri al
+      ed.kalemler.forEach(k=>{const u=urun(k.urunId);if(u){u.stok=Math.max(0,u.stok-k.miktar);if(chg.indexOf(u)<0)chg.push(u);}});
+      DB.stokHar=DB.stokHar.filter(h=>h.ref!==aid); delByRef('stokHar',aid);
+    }
+    const har=[];
+    items.forEach(k=>{const u=urun(k.urunId);u.stok+=k.miktar;u.alis=k.fiyat;if(chg.indexOf(u)<0)chg.push(u);const h={id:uid('h'),tarih,urunId:k.urunId,ad:k.ad,tip:'giris',miktar:k.miktar,aciklama:'Alım · '+td.ad,ref:aid};DB.stokHar.push(h);har.push(h);});
+    const buy={id:aid,tarih,tedarikciId:tId,tedarikci:td.ad,kalemler:items,toplam,odeme:val('a_odeme')};
+    if(ed)Object.assign(ed,buy); else DB.alimlar.push(buy);
+    put('alimlar', ed||buy); putMany('stokHar',har); putMany('urunler',chg);
+    closeModal();toast(ed?'Alım güncellendi · stok düzeltildi':'Alım kaydedildi · stok güncellendi');go('alim');
+  },ed?'Değişikliği kaydet':'Alımı kaydet',true);
 }
 function delAlim(id){
   if(!confirm('Bu alım silinsin mi? Stok geri alınacak.'))return;
