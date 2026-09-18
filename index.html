@@ -928,7 +928,7 @@ function mfRender(){
     const fb=Math.round(u.satis*(1-isk/100)*100)/100; const cur=mfBuf[u.id];
     return `<div class="mf-row">
       <div class="mf-info"><b>${esc(u.ad)}</b><span>liste ${TL0(u.satis)}${isk?` · iskontolu ${TL0(fb)}`:''}</span></div>
-      <input class="mf-in" type="number" inputmode="decimal" value="${cur!=null?cur:''}" placeholder="${Math.round(fb)}" oninput="mfSet('${u.id}',this.value)">
+      <input class="mf-in" type="number" inputmode="decimal" step="any" value="${cur!=null?cur:''}" placeholder="${Math.round(fb)}" oninput="mfSet('${u.id}',this.value)">
     </div>`;}).join(''):`<div class="empty" style="padding:24px"><b>Ürün bulunamadı</b></div>`;
 }
 function mfSet(id,v){ const n=parseFloat(v); if(v===''||isNaN(n)) delete mfBuf[id]; else mfBuf[id]=n; }
@@ -1138,7 +1138,7 @@ const numv=id=>{const e=document.getElementById(id);return e?parseFloat(e.value)
 function field(id,label,type='text',v='',opts){
   if(type==='select')return `<div class="field"><label>${label}</label><select id="${id}">${opts.map(o=>`<option value="${o}"${o===v?' selected':''}>${o}</option>`).join('')}</select></div>`;
   if(type==='textarea')return `<div class="field full"><label>${label}</label><textarea id="${id}" rows="2">${esc(v)}</textarea></div>`;
-  return `<div class="field"><label>${label}</label><input id="${id}" type="${type}" value="${esc(v)}"></div>`;
+  return `<div class="field"><label>${label}</label><input id="${id}" type="${type}"${type==='number'?' step="any"':''} value="${esc(v)}"></div>`;
 }
 function toast(msg){ const t=$('#toast'); t.innerHTML=svg(I.check,17)+esc(msg); t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
 
@@ -1238,9 +1238,9 @@ function renderItemRows(){
   const box=document.getElementById('itemRows'); if(!box)return;
   box.innerHTML=itemsBuf.map((r,i)=>`<div class="item-row">
     <select onchange="setItem(${i},'urunId',this.value)"><option value="">Seç...</option>${DB.urunler.map(u=>`<option value="${u.id}"${u.id===r.urunId?' selected':''}>${esc(u.ad)}</option>`).join('')}</select>
-    <input type="number" min="0" value="${r.miktar}" oninput="setItem(${i},'miktar',this.value)">
-    <input type="number" min="0" value="${r.fiyat}" oninput="setItem(${i},'fiyat',this.value)">
-    <div class="lt">${TL(r.miktar*r.fiyat)}</div>
+    <input type="number" min="0" step="any" value="${r.miktar}" oninput="setItem(${i},'miktar',this.value)">
+    <input type="number" min="0" step="any" value="${r.fiyat}" oninput="setItem(${i},'fiyat',this.value)">
+    <div class="lt" id="lt${i}">${TL(r.miktar*r.fiyat)}</div>
     <button class="rm" type="button" onclick="rmItem(${i})">×</button>
   </div>`).join('');
   document.getElementById('itemTotal').textContent=TL(itemsBuf.reduce((s,r)=>s+r.miktar*r.fiyat,0));
@@ -1249,7 +1249,11 @@ function addItemRow(){ itemsBuf.push({urunId:'',miktar:1,fiyat:0}); renderItemRo
 function rmItem(i){ itemsBuf.splice(i,1); if(!itemsBuf.length)addItemRow(); else renderItemRows(); }
 function setItem(i,f,v){
   if(f==='urunId'){ itemsBuf[i].urunId=v; const u=urun(v); if(u){ if(itemsMode==='satis'){ const cid=(document.getElementById('s_mus')||{}).value; itemsBuf[i].fiyat=fiyatBul(cid,v); } else itemsBuf[i].fiyat=u.alis; } renderItemRows(); }
-  else { itemsBuf[i][f]=parseFloat(v)||0; renderItemRows(); }
+  else { itemsBuf[i][f]=parseFloat(v)||0; updItemTotals(i); }
+}
+function updItemTotals(i){
+  const r=itemsBuf[i]; const lt=document.getElementById('lt'+i); if(lt)lt.textContent=TL(r.miktar*r.fiyat);
+  const tot=document.getElementById('itemTotal'); if(tot)tot.textContent=TL(itemsBuf.reduce((s,x)=>s+x.miktar*x.fiyat,0));
 }
 function repriceItems(){ const cid=(document.getElementById('s_mus')||{}).value; itemsBuf.forEach(r=>{ if(r.urunId)r.fiyat=fiyatBul(cid,r.urunId); }); renderItemRows(); }
 function collectItems(){
