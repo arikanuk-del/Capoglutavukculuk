@@ -578,7 +578,16 @@ const TL=n=>(Math.round((n||0)*100)/100).toLocaleString('tr-TR',{minimumFraction
 const TL0=n=>Math.round(n||0).toLocaleString('tr-TR')+' ₺';
 const NUM=n=>(n||0).toLocaleString('tr-TR');
 const DATE=d=>new Date(d).toLocaleDateString('tr-TR');
+const DT=d=>new Date(d).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 const todayISO=()=>new Date().toISOString().slice(0,10);
+// Seçilen tarihi o anki saatle birleştir (tarih boşsa/bugünse = şimdi)
+function tsFromDate(dateStr){
+  if(!dateStr)return new Date().toISOString();
+  const now=new Date(); const d=new Date(dateStr+'T00:00:00');
+  if(isNaN(d))return new Date().toISOString();
+  d.setHours(now.getHours(),now.getMinutes(),now.getSeconds(),0);
+  return d.toISOString();
+}
 const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
 const thisMonth=d=>{const x=new Date(d),n=new Date();return x.getMonth()===n.getMonth()&&x.getFullYear()===n.getFullYear();};
 const urun=id=>DB.urunler.find(u=>u.id===id);
@@ -743,7 +752,7 @@ function viewPanel(){
       <div class="alist">
         ${acts.slice(0,6).map(a=>`<div class="arow">
           <div class="aic ${a.type}">${svg(a.type==='in'?I.down:a.type==='out'?I.up:I.alim,16)}</div>
-          <div class="at"><b>${esc(a.title)}</b><span>${a.sub} · ${DATE(a.d)}</span></div>
+          <div class="at"><b>${esc(a.title)}</b><span>${a.sub} · ${DT(a.d)}</span></div>
           <div class="av ${a.type==='in'?'pos':a.type==='out'?'neg':''}">${a.val}</div>
         </div>`).join('')}
       </div>
@@ -830,7 +839,7 @@ function viewStok(){
       <div class="alist">
         ${har.length?har.map(h=>`<div class="arow">
           <div class="aic ${h.tip==='giris'?'in':h.tip==='fire'?'out':'out'}">${svg(h.tip==='giris'?I.down:I.up,16)}</div>
-          <div class="at"><b>${esc(h.ad)}</b><span>${esc(h.aciklama)} · ${DATE(h.tarih)}</span></div>
+          <div class="at"><b>${esc(h.ad)}</b><span>${esc(h.aciklama)} · ${DT(h.tarih)}</span></div>
           <div class="av ${h.tip==='giris'?'pos':'neg'}">${h.tip==='giris'?'+':'−'}${NUM(h.miktar)}</div>
         </div>`).join(''):`<div class="empty" style="padding:24px"><b>Hareket yok</b></div>`}
       </div>
@@ -864,7 +873,7 @@ function viewAlim(){
   const box=list.length?`<div class="table-wrap"><table>
     <thead><tr><th>Tarih</th><th>Tedarikçi</th><th>Ürünler</th><th class="r">Tutar</th><th>Ödeme</th><th></th></tr></thead>
     <tbody>${list.map(a=>`<tr>
-      <td class="num">${DATE(a.tarih)}</td>
+      <td class="num">${DT(a.tarih)}</td>
       <td class="t-name">${esc(a.tedarikci)}</td>
       <td class="t-sub">${a.kalemler.map(k=>esc(k.ad)+' ×'+NUM(k.miktar)).join(', ')}</td>
       <td class="r num"><b>${TL(a.toplam)}</b></td>
@@ -954,7 +963,7 @@ function viewSatis(){
   const box=list.length?`<div class="table-wrap"><table>
     <thead><tr><th>Tarih</th><th>Müşteri</th><th>Ürünler</th><th class="r">Tutar</th><th>Ödeme</th><th>Teslimat</th><th></th></tr></thead>
     <tbody>${list.map(s=>`<tr>
-      <td class="num">${DATE(s.tarih)}</td>
+      <td class="num">${DT(s.tarih)}</td>
       <td class="t-name">${esc(s.musteri)}</td>
       <td class="t-sub">${s.kalemler.map(k=>esc(k.ad)+' ×'+NUM(k.miktar)).join(', ')}</td>
       <td class="r num"><b>${TL(s.toplam)}</b>${s.odemeTipi==='kismi'?`<div class="t-sub">Ödenen ${TL0(s.odenen)}</div>`:''}</td>
@@ -995,7 +1004,7 @@ function viewCari(){
       <div class="alist">
         ${har.map(h=>`<div class="arow">
           <div class="aic ${h.tip==='tahsilat'?'in':'out'}">${svg(h.tip==='tahsilat'?I.cash:I.up,16)}</div>
-          <div class="at"><b>${esc(musteri(h.musteriId)?.unvan||'')}</b><span>${h.tip==='tahsilat'?'Tahsilat':'Borç'} · ${DATE(h.tarih)}</span></div>
+          <div class="at"><b>${esc(musteri(h.musteriId)?.unvan||'')}</b><span>${h.tip==='tahsilat'?'Tahsilat':'Borç'} · ${DT(h.tarih)}</span></div>
           <div class="av ${h.tip==='tahsilat'?'pos':'neg'}">${h.tip==='tahsilat'?'−':'+'}${TL0(h.tutar)}</div>
         </div>`).join('')}
       </div>
@@ -1021,7 +1030,7 @@ function viewGider(){
       ${list.length?`<div class="table-wrap"><table>
         <thead><tr><th>Tarih</th><th>Açıklama</th><th>Kategori</th><th class="r">Tutar</th><th>Durum</th><th></th></tr></thead>
         <tbody>${list.map(g=>`<tr>
-          <td class="num">${DATE(g.tarih)}</td>
+          <td class="num">${DT(g.tarih)}</td>
           <td class="t-name">${esc(g.aciklama)}</td>
           <td><span class="badge b-mut">${g.kategori}</span></td>
           <td class="r num"><b>${TL(g.tutar)}</b></td>
@@ -1278,7 +1287,7 @@ function formSatis(){
     const toplam=items.reduce((s,k)=>s+k.miktar*k.fiyat,0);
     const tip=val('s_odeme');
     const odenen= tip==='pesin'?toplam : tip==='veresiye'?0 : numv('s_odenen');
-    const cId=val('s_mus'), m=musteri(cId), id=uid('s'), tarih=new Date(val('s_tarih')||todayISO()).toISOString();
+    const cId=val('s_mus'), m=musteri(cId), id=uid('s'), tarih=tsFromDate(val('s_tarih'));
     const sale={id,tarih,musteriId:cId,musteri:m.unvan,kalemler:items,toplam,odemeTipi:tip,odenen,teslimat:val('s_teslim')};
     DB.satislar.push(sale);
     const har=[],chg=[];
@@ -1316,7 +1325,7 @@ function formAlim(id){
     const tId=val('a_ted'),td=DB.tedarikciler.find(t=>t.id===tId);
     if(!td)return toast('Tedarikçi seçin');
     const toplam=items.reduce((s,k)=>s+k.miktar*k.fiyat,0);
-    const tarih=new Date(val('a_tarih')||todayISO()).toISOString();
+    const tarih=tsFromDate(val('a_tarih'));
     const aid=ed?id:uid('a'); const chg=[];
     if(ed){ // eski etkiyi geri al
       ed.kalemler.forEach(k=>{const u=urun(k.urunId);if(u){u.stok=Math.max(0,u.stok-k.miktar);if(chg.indexOf(u)<0)chg.push(u);}});
@@ -1351,7 +1360,7 @@ function formTahsilat(cId){
     ${field('p_acik','Açıklama','text','Nakit tahsilat').replace('class="field"','class="field full"')}
   </div>`,()=>{
     const t=numv('p_tutar'); if(t<=0)return toast('Tutar girin');
-    const rec={id:uid('cr'),tarih:new Date(val('p_tarih')||todayISO()).toISOString(),musteriId:val('p_mus'),tip:'tahsilat',tutar:t,aciklama:val('p_acik')||'Tahsilat'};
+    const rec={id:uid('cr'),tarih:tsFromDate(val('p_tarih')),musteriId:val('p_mus'),tip:'tahsilat',tutar:t,aciklama:val('p_acik')||'Tahsilat'};
     DB.cariHar.push(rec);put('cariHar',rec);closeModal();toast('Tahsilat kaydedildi');viewCari();
   },'Tahsilatı kaydet');
 }
@@ -1367,7 +1376,7 @@ function formGider(){
     <div class="field full"><label>İlgili personel (maaş ise)</label><select id="g_pers"><option value="">— Yok —</option>${DB.personel.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select></div>
   </div>`,()=>{
     if(numv('g_tutar')<=0)return toast('Tutar girin');
-    const rec={id:uid('g'),tarih:new Date(val('g_tarih')||todayISO()).toISOString(),kategori:val('g_kat'),tutar:numv('g_tutar'),aciklama:val('g_acik')||val('g_kat'),odeme:val('g_odeme'),personelId:val('g_pers')};
+    const rec={id:uid('g'),tarih:tsFromDate(val('g_tarih')),kategori:val('g_kat'),tutar:numv('g_tutar'),aciklama:val('g_acik')||val('g_kat'),odeme:val('g_odeme'),personelId:val('g_pers')};
     DB.giderler.push(rec);put('giderler',rec);closeModal();toast('Gider kaydedildi');viewGider();
   });
 }
