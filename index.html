@@ -290,6 +290,17 @@ th.r,td.r{text-align:right}
 .mf-info span{font-size:11.5px;color:var(--muted)}
 .mf-in{width:112px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;text-align:right;font-variant-numeric:tabular-nums;background:var(--surface);color:var(--ink)}
 .mf-in:focus{outline:none;border-color:var(--petrol);box-shadow:0 0 0 3px var(--petrol-l)}
+.fis-zone{border:1.5px dashed var(--line);border-radius:12px;padding:16px;text-align:center;cursor:pointer;background:var(--frost);transition:border-color .15s,background .15s;margin-bottom:14px}
+.fis-zone:hover,.fis-zone.drag{border-color:var(--petrol);background:var(--petrol-l)}
+.fis-empty{color:var(--muted)}
+.fis-empty .fic{width:32px;height:32px;margin:0 auto 8px;color:var(--petrol)}
+.fis-empty b{display:block;color:var(--ink-2);font-size:13.5px;font-weight:700;margin-bottom:3px}
+.fis-empty span{font-size:11.5px;display:block;max-width:320px;margin:0 auto;line-height:1.45}
+.fis-prev{display:flex;align-items:center;gap:12px;text-align:left}
+.fis-prev img{width:60px;height:60px;object-fit:cover;border-radius:9px;border:1px solid var(--line);flex:none}
+.fis-msg{flex:1;min-width:0;font-size:12.5px;font-weight:700}
+.fis-msg small{display:block;font-weight:500;font-size:11px;margin-top:3px;line-height:1.4}
+.fis-spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--petrol);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
 
 .backdrop{display:none}
 kbd{background:#eef2f2;border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;font-family:inherit;color:var(--ink-2)}
@@ -635,7 +646,8 @@ const I={
   barcode:'<path d="M3 5v14M6 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/>',
   sun:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/>',
   moon:'<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.3a6.6 6.6 0 0 0 9.8 9.5z"/>',
-  price:'<path d="M20.6 13.4 12 22l-9-9V3h10zM7.5 7.5h.01"/>'
+  price:'<path d="M20.6 13.4 12 22l-9-9V3h10zM7.5 7.5h.01"/>',
+  receipt:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4"/>'
 };
 const svg=(p,w=20)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px">${p}</svg>`;
 
@@ -1035,7 +1047,7 @@ function viewGider(){
           <td><span class="badge b-mut">${g.kategori}</span></td>
           <td class="r num"><b>${TL(g.tutar)}</b></td>
           <td>${badgeGiderOdeme(g.odeme)}</td>
-          <td><div class="row-act"><button class="icon-btn" onclick="delItem('giderler','${g.id}','${esc(g.aciklama)}')">${svg(I.trash,15)}</button></div></td>
+          <td><div class="row-act">${g.foto?`<button class="icon-btn" title="Fişi gör" onclick="fisGoster('${esc(g.foto)}')">${svg(I.receipt,15)}</button>`:''}<button class="icon-btn" title="Sil" onclick="delItem('giderler','${g.id}','${esc(g.aciklama)}')">${svg(I.trash,15)}</button></div></td>
         </tr>`).join('')}</tbody></table></div>`
         :`<div class="panel"><div class="empty"><b>Gider kaydı yok</b><p>Yakıt, maaş, kira gibi giderleri buraya girin.</p></div></div>`}
     </div>
@@ -1144,6 +1156,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
 const val=id=>{const e=document.getElementById(id);return e?e.value.trim():'';};
 const numv=id=>{const e=document.getElementById(id);return e?parseFloat(e.value)||0:0;};
+const setVal=(id,v)=>{const e=document.getElementById(id);if(e&&v!=null&&v!=='')e.value=v;};
 function field(id,label,type='text',v='',opts){
   if(type==='select')return `<div class="field"><label>${label}</label><select id="${id}">${opts.map(o=>`<option value="${o}"${o===v?' selected':''}>${o}</option>`).join('')}</select></div>`;
   if(type==='textarea')return `<div class="field full"><label>${label}</label><textarea id="${id}" rows="2">${esc(v)}</textarea></div>`;
@@ -1366,19 +1379,77 @@ function formTahsilat(cId){
 }
 
 /* ---- GİDER ---- */
+let fisImg=null; // {b64, mime, dataUrl, blob}
+function fisEmptyHTML(){ return `<div class="fis-empty"><div class="fic">${svg(I.receipt,32)}</div><b>Fiş / fatura ekle</b><span>Fotoğraf çek, sürükle-bırak ya da dosya seç — yapay zekâ tutar, tarih ve satıcıyı doldursun</span></div>`; }
 function formGider(){
-  openModal('Yeni gider',`<div class="form-grid">
+  fisImg=null;
+  openModal('Yeni gider',`
+    <div class="fis-zone" id="fisZone" onclick="if(event.target.id!=='fisFile')document.getElementById('fisFile').click()">
+      <input type="file" id="fisFile" accept="image/*" style="display:none" onchange="fisPicked(this.files&&this.files[0])">
+      <div id="fisInner">${fisEmptyHTML()}</div>
+    </div>
+    <div class="form-grid">
     ${field('g_tarih','Tarih','date',todayISO())}
     ${field('g_kat','Kategori','select','yakıt',['yakıt','maaş','kira','elektrik','araç bakım','fatura','diğer'])}
     ${field('g_tutar','Tutar (₺)','number','')}
     ${field('g_odeme','Ödeme durumu','select','ödendi',['ödendi','bekliyor'])}
     ${field('g_acik','Açıklama','text','').replace('class="field"','class="field full"')}
     <div class="field full"><label>İlgili personel (maaş ise)</label><select id="g_pers"><option value="">— Yok —</option>${DB.personel.map(p=>`<option value="${p.id}">${esc(p.ad)}</option>`).join('')}</select></div>
-  </div>`,()=>{
+  </div>`,async()=>{
     if(numv('g_tutar')<=0)return toast('Tutar girin');
-    const rec={id:uid('g'),tarih:tsFromDate(val('g_tarih')),kategori:val('g_kat'),tutar:numv('g_tutar'),aciklama:val('g_acik')||val('g_kat'),odeme:val('g_odeme'),personelId:val('g_pers')};
+    const rec={id:uid('g'),tarih:tsFromDate(val('g_tarih')),kategori:val('g_kat'),tutar:numv('g_tutar'),aciklama:val('g_acik')||val('g_kat'),odeme:val('g_odeme'),personelId:val('g_pers'),foto:''};
+    if(fisImg&&fisImg.blob){
+      try{ const path=rec.id+'.jpg'; const {error}=await sb.storage.from('fisler').upload(path,fisImg.blob,{contentType:'image/jpeg',upsert:true}); if(!error)rec.foto=path; else console.warn('foto yüklenemedi',error); }
+      catch(e){ console.warn('foto yüklenemedi',e); }
+    }
     DB.giderler.push(rec);put('giderler',rec);closeModal();toast('Gider kaydedildi');viewGider();
   });
+  wireFisDrop();
+}
+function wireFisDrop(){
+  const z=document.getElementById('fisZone'); if(!z)return;
+  ['dragenter','dragover'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.remove('drag');}));
+  z.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f)fisPicked(f);});
+}
+function compressImage(file,maxDim=1400,quality=0.7){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{ URL.revokeObjectURL(url);
+      let w=img.width,h=img.height;
+      if(w>h&&w>maxDim){h=Math.round(h*maxDim/w);w=maxDim;} else if(h>=w&&h>maxDim){w=Math.round(w*maxDim/h);h=maxDim;}
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(blob=>{ if(!blob)return reject(); const r=new FileReader(); r.onload=()=>{const dataUrl=String(r.result);resolve({b64:dataUrl.split(',')[1],mime:'image/jpeg',dataUrl,blob});}; r.onerror=reject; r.readAsDataURL(blob); },'image/jpeg',quality);
+    };
+    img.onerror=reject; img.src=url;
+  });
+}
+async function fisPicked(file){
+  if(!file||!/^image\//.test(file.type))return toast('Görüntü seçin');
+  try{ fisImg=await compressImage(file); }catch(e){ return toast('Görüntü okunamadı'); }
+  renderFis('okunuyor');
+  try{
+    const {data,error}=await sb.functions.invoke('fis-oku',{body:{image:fisImg.b64,mimeType:fisImg.mime}});
+    if(error||!data||data.error){ renderFis('hata'); return; }
+    const kats=['yakıt','maaş','kira','elektrik','araç bakım','fatura','diğer'];
+    setVal('g_tutar',data.tutar); setVal('g_tarih',data.tarih);
+    if(data.kategori&&kats.includes(data.kategori))setVal('g_kat',data.kategori);
+    if(data.satici)setVal('g_acik',data.satici);
+    renderFis('ok');
+  }catch(e){ renderFis('hata'); }
+}
+function renderFis(state){
+  const box=document.getElementById('fisInner'); if(!box)return;
+  const img=fisImg?`<img src="${fisImg.dataUrl}" alt="fiş">`:'';
+  if(state==='okunuyor')box.innerHTML=`<div class="fis-prev">${img}<div class="fis-msg" style="color:var(--petrol-d)"><span class="fis-spin"></span>Fiş okunuyor…<small style="color:var(--muted)">Tutar, tarih ve satıcı çıkarılıyor</small></div></div>`;
+  else if(state==='ok')box.innerHTML=`<div class="fis-prev">${img}<div class="fis-msg" style="color:var(--fresh)">Yapay zekâ doldurdu ✓<small style="color:var(--muted)">Alanları kontrol et · değiştirmek için dokun · fotoğraf arşivlenecek</small></div></div>`;
+  else box.innerHTML=`<div class="fis-prev">${img}<div class="fis-msg" style="color:var(--amber)">Otomatik okunamadı<small style="color:var(--muted)">Bilgileri elle gir · fotoğraf yine arşivlenecek</small></div></div>`;
+}
+async function fisGoster(path){
+  openModal('Fiş',`<div id="fisView" style="text-align:center;color:var(--muted);padding:20px">Yükleniyor…</div>`,()=>closeModal(),'Kapat');
+  try{ const {data,error}=await sb.storage.from('fisler').createSignedUrl(path,3600); if(error||!data)throw error||1;
+    const v=document.getElementById('fisView'); if(v)v.innerHTML=`<img src="${data.signedUrl}" style="max-width:100%;border-radius:10px">`;
+  }catch(e){ const v=document.getElementById('fisView'); if(v)v.textContent='Fiş yüklenemedi.'; }
 }
 
 /* ---- PERSONEL ---- */
