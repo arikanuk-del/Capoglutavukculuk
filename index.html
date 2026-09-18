@@ -807,6 +807,7 @@ function viewStok(){
   $('#view').innerHTML=`
   <div class="toolbar">
     <button class="btn btn-primary" onclick="startIntake()">${svg(I.down,16)}Hızlı mal kabul</button>
+    <button class="btn btn-ghost" onclick="formStok()">${svg(I.plus,16)}Stok girişi / çıkışı</button>
     <button class="btn btn-ghost" onclick="scanForStock()">${svg(I.barcode,16)}Barkod tara</button>
     <div class="spacer" style="flex:1"></div>
     <div style="font-size:12.5px;color:var(--muted);font-weight:600">${kritikler().length} kritik ürün</div>
@@ -1179,19 +1180,24 @@ function formTedarikci(){
 
 /* ---- STOK HAREKET ---- */
 function formStok(id){
-  const u=urun(id);
-  openModal('Stok hareketi · '+u.ad,`<div class="form-grid">
-    <div class="field full"><span class="hint">Mevcut stok: <b>${NUM(u.stok)} ${u.birim}</b></span></div>
+  const fixed=!!id; const u=id?urun(id):null;
+  const prod=fixed
+    ? `<div class="field full"><span class="hint">Ürün: <b>${esc(u.ad)}</b> · Mevcut stok: <b>${NUM(u.stok)} ${u.birim}</b></span></div>`
+    : `<div class="field full"><label>Ürün</label><select id="h_urun"><option value="">Seç...</option>${DB.urunler.map(p=>`<option value="${p.id}">${esc(p.ad)} — ${NUM(p.stok)} ${p.birim}</option>`).join('')}</select></div>`;
+  openModal('Stok hareketi',`<div class="form-grid">
+    ${prod}
     ${field('h_tip','Hareket tipi','select','giris',['giris','cikis','fire'])}
     ${field('h_miktar','Miktar','number','')}
     ${field('h_acik','Açıklama','text','').replace('class="field"','class="field full"')}
   </div>`,()=>{
+    const uu=fixed?u:urun(val('h_urun'));
+    if(!uu)return toast('Ürün seçin');
     const m=numv('h_miktar'),tip=val('h_tip');
     if(m<=0)return toast('Miktar girin');
-    u.stok += tip==='giris'? m : -m;
-    if(u.stok<0)u.stok=0;
-    const h={id:uid('h'),tarih:new Date().toISOString(),urunId:id,ad:u.ad,tip,miktar:m,aciklama:val('h_acik')||({giris:'Manuel giriş',cikis:'Manuel çıkış',fire:'Fire / zayi'}[tip])};
-    DB.stokHar.push(h);put('urunler',u);put('stokHar',h);closeModal();toast('Stok güncellendi');viewStok();
+    uu.stok += tip==='giris'? m : -m;
+    if(uu.stok<0)uu.stok=0;
+    const h={id:uid('h'),tarih:new Date().toISOString(),urunId:uu.id,ad:uu.ad,tip,miktar:m,aciklama:val('h_acik')||({giris:'Manuel giriş',cikis:'Manuel çıkış',fire:'Fire / zayi'}[tip])};
+    DB.stokHar.push(h);put('urunler',uu);put('stokHar',h);closeModal();toast('Stok güncellendi');viewStok();
   });
 }
 
